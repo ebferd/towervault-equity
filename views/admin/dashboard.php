@@ -12,7 +12,7 @@
   <?php endforeach; ?>
 </div>
 
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem">
+<div class="dashboard-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem">
   <div class="section">
     <div class="section-head"><span class="section-title">Recent Investors</span><a href="/admin/users" class="section-link">View All</a></div>
     <div class="tbl-overflow">
