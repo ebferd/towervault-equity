@@ -1,0 +1,36 @@
+# ─────────────────────────────────────────────────────────────
+#  NexVest — files that must NEVER be overwritten on the server
+#  (they live only on the live server and hold real data/config)
+# ─────────────────────────────────────────────────────────────
+/.env
+
+/uploads/*
+!/uploads/.gitkeep
+
+/storage/logs/*
+!/storage/logs/.gitkeep
+
+/storage/tmp/*
+!/storage/tmp/.gitkeep
+
+/storage/sessions/*
+!/storage/sessions/.htaccess
+
+# dev-only helper, not needed on server
+/storage/make_zip.php
+/preview-portfolio.html
+
+# ── Composer libraries — installed once with: composer install --no-dev ──
+# (If your host has NO composer/SSH, delete the line below so vendor/ is
+#  committed to the repo and deploys with a plain `git pull`.)
+/vendor/
+
+# ── Dev / OS junk ──
+*.bak
+*.tmp
+*.log
+.DS_Store
+Thumbs.db
+_cert*.html
+_cert*.pdf
+/_certpreview/

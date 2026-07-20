@@ -1,0 +1,16 @@
+{
+  "name": "nexvest/platform",
+  "description": "NexVest Capital Group — Institutional Investment Platform",
+  "type": "project",
+  "require": {
+    "php": ">=8.1",
+    "phpmailer/phpmailer": "^6.9",
+    "pragmarx/google2fa": "^8.0",
+    "bacon/bacon-qr-code": "^2.0",
+    "mpdf/mpdf": "^8.2"
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "sort-packages": true
+  }
+}

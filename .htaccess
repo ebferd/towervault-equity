@@ -1,0 +1,56 @@
+﻿Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Allow installer and static assets through directly
+    RewriteRule ^install\.php$  -  [L]
+    RewriteRule ^favicon\.ico$  -  [L]
+    RewriteRule ^assets/        -  [L]
+    RewriteRule ^uploads/       -  [L]
+
+    # Block direct access to private folders (return 403)
+    RewriteRule ^(app|config|cron|database|routes|views|storage|vendor)(/?|/.*)$ - [F,L]
+
+    # Block .env and composer files
+    RewriteRule ^\.env$                  - [F,L]
+    RewriteRule ^composer\.(json|lock)$  - [F,L]
+
+    # Route everything else through index.php
+    RewriteRule ^index\.php$ - [L]
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ index.php [QSA,L]
+</IfModule>
+
+# Security headers
+<IfModule mod_headers.c>
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+</IfModule>
+
+# PHP limits â€” works on most cPanel servers
+<IfModule mod_php.c>
+    php_value upload_max_filesize 10M
+    php_value post_max_size       12M
+    php_value max_execution_time  60
+    php_value memory_limit        256M
+</IfModule>
+<IfModule mod_php8.c>
+    php_value upload_max_filesize 10M
+    php_value post_max_size       12M
+    php_value max_execution_time  60
+    php_value memory_limit        256M
+</IfModule>
+<IfModule mod_php7.c>
+    php_value upload_max_filesize 10M
+    php_value post_max_size       12M
+    php_value max_execution_time  60
+    php_value memory_limit        256M
+</IfModule>
+
+
