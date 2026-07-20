@@ -168,7 +168,7 @@ a:hover { opacity: .8; text-decoration: underline; }
   transition: transform var(--t-lg);
   border-right: 1px solid rgba(255,255,255,.05);
 }
-.main { margin-left:var(--sidebar);flex:1;display:flex;flex-direction:column;min-height:100vh; }
+.main { margin-left:var(--sidebar);flex:1;display:flex;flex-direction:column;min-height:100vh;min-width:0; }
 
 .sb-logo { padding:1.35rem 1.25rem 1.25rem;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;gap:11px; }
 .sb-mark { width:34px;height:34px;background:linear-gradient(135deg,var(--accent),var(--accent-h));display:flex;align-items:center;justify-content:center;font-family:'DM Serif Display',serif;font-size:13px;color:#fff;border-radius:var(--r-sm);flex-shrink:0;box-shadow:0 2px 8px rgba(26,109,181,.35); }
@@ -890,7 +890,7 @@ a:hover { opacity: .8; text-decoration: underline; }
   [dir="rtl"] .main        { margin-right:0; }
 }
 @media (max-width:480px) {
-  .stats-grid  { grid-template-columns:1fr; }
+  .stats-grid  { grid-template-columns:1fr 1fr; }
   .otp-cell    { width:42px;height:50px;font-size:20px; }
   .otp-row     { gap:6px; }
   .tb-balance  { display:none; }
