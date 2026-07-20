@@ -20,10 +20,13 @@
 /storage/make_zip.php
 /preview-portfolio.html
 
-# ── Composer libraries — installed once with: composer install --no-dev ──
-# (If your host has NO composer/SSH, delete the line below so vendor/ is
-#  committed to the repo and deploys with a plain `git pull`.)
-/vendor/
+# NOTE: vendor/ (Composer libraries) IS committed to this repo on purpose,
+# so deployment needs no Composer/SSH — a plain git pull brings everything.
+
+# mPDF bundles ~88MB of language fonts; this app only renders with DejaVu.
+# Ship the DejaVu family only — keeps the repo small and deploys fast.
+vendor/mpdf/mpdf/ttfonts/*
+!vendor/mpdf/mpdf/ttfonts/DejaVu*
 
 # ── Dev / OS junk ──
 *.bak
