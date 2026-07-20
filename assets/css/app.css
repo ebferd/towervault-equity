@@ -882,7 +882,9 @@ a:hover { opacity: .8; text-decoration: underline; }
   .modal-overlay { padding:.5rem; }
   .tabs        { overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap; }
   .tab         { white-space:nowrap;flex-shrink:0; }
-  .data-table th:nth-child(n+4),.data-table td:nth-child(n+4) { display:none; }
+  /* Stack any inline multi-column grid (settings forms, ticket two-pane, etc.) */
+  [style*="grid-template-columns"] { grid-template-columns:1fr !important; }
+  /* Tables now scroll horizontally via their .tbl-overflow wrapper (no hidden columns) */
   [dir="rtl"] .sidebar     { transform:translateX(100%); }
   [dir="rtl"] .sidebar.open { transform:translateX(0); }
   [dir="rtl"] .main        { margin-right:0; }
