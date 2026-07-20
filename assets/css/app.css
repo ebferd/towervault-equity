@@ -866,7 +866,7 @@ a:hover { opacity: .8; text-decoration: underline; }
 @media (max-width:768px) {
   .sidebar     { transform:translateX(-100%); }
   .sidebar.open{ transform:translateX(0); }
-  .sb-overlay  { display:block; }
+  .sb-overlay.open { display:block; }
   .main        { margin-left:0; }
   .topbar      { padding:0 1.25rem; }
   .content     { padding:1.25rem; }
