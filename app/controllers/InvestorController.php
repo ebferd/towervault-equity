@@ -1628,6 +1628,23 @@ HTML;
         view('investor.calculator', compact('investments') + ['title'=>'Earnings Calculator']);
     }
 
+    // ── How It Works ───────────────────────────────────────────
+    public static function howItWorks(): void {
+        AuthMiddleware::investor();
+        // Everything on the page reads from platform settings so it stays accurate
+        view('investor.how_it_works', [
+            'title'       => 'How It Works',
+            'minDeposit'  => (float) platform_setting('min_deposit',    '100'),
+            'minWithdraw' => (float) platform_setting('min_withdrawal', '50'),
+            'kycOn'       => platform_setting('kyc_enabled', '1') === '1',
+            'refRate'     => (float) platform_setting('referral_commission', '5'),
+            'payCrypto'   => platform_setting('payment_crypto', '1') === '1',
+            'payPaypal'   => platform_setting('payment_paypal', '1') === '1',
+            'payWire'     => platform_setting('payment_wire',   '1') === '1',
+            'sampleRoi'   => (float) (DB::fetch("SELECT roi FROM investments WHERE status='active' ORDER BY id LIMIT 1")['roi'] ?? 20),
+        ]);
+    }
+
     // ── Terminate Investment ────────────────────────────────────
     public static function terminateInvestment(): void {
         AuthMiddleware::investor();
