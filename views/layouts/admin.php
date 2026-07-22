@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <meta name="csrf-token" content="<?= csrf_token() ?>"/>
 <title><?= htmlspecialchars($title ?? 'Admin') ?> — <?= htmlspecialchars(platform_setting('platform_name','NexVest')) ?> Admin</title>
-<link rel="stylesheet" href="/assets/css/app.css?v=<?= filemtime(ROOT.'/assets/css/app.css') ?>"/>
+<?= favicon_tag() ?><link rel="stylesheet" href="/assets/css/app.css?v=<?= filemtime(ROOT.'/assets/css/app.css') ?>"/>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   .goog-te-banner-frame,.skiptranslate{display:none!important}

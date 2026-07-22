@@ -87,6 +87,24 @@ class Mailer {
     // ── Email wrapper (branded template) ─────────────────────
     // ── Template helpers ──────────────────────────────────────
 
+    /**
+     * Header brand cell for emails — the uploaded logo when one is set,
+     * otherwise the initials badge. Emails need an absolute image URL.
+     */
+    private static function brandCell(string $pName, string $pInit): string {
+        $logo = (string) platform_setting('platform_logo', '');
+        if (trim($logo) !== '') {
+            $src = htmlspecialchars(file_url_abs($logo), ENT_QUOTES);
+            $alt = htmlspecialchars($pName, ENT_QUOTES);
+            return '<td style="width:32px;height:32px;vertical-align:middle">'
+                 . '<img src="' . $src . '" width="32" height="32" alt="' . $alt . '" '
+                 . 'style="display:block;width:32px;height:32px;border-radius:6px;object-fit:contain"/></td>';
+        }
+        return '<td style="background:#111827;border-radius:6px;width:32px;height:32px;text-align:center;vertical-align:middle">'
+             . '<span style="font-family:Georgia,serif;font-size:11px;font-weight:700;color:#ffffff;line-height:32px;display:block;letter-spacing:-.5px">'
+             . htmlspecialchars($pInit) . '</span></td>';
+    }
+
     private static function wrap(string $content, string $preheader = ''): string {
         $pName    = platform_setting('platform_name',    'NexVest');
         $pTagline = platform_setting('platform_tagline', 'Capital Group');
@@ -103,6 +121,7 @@ class Mailer {
 
         $phone = $pPhone ? " &middot; {$pPhone}" : '';
         $addr  = $pAddr  ? "{$pAddr} &middot; " : '';
+        $brandCell = self::brandCell($pName, $pInit);
 
         return <<<HTML
 <!DOCTYPE html>
@@ -136,9 +155,7 @@ img{border:0;display:block}
     <table width="100%" cellpadding="0" cellspacing="0"><tr>
       <td valign="middle">
         <table cellpadding="0" cellspacing="0"><tr>
-          <td style="background:#111827;border-radius:6px;width:32px;height:32px;text-align:center;vertical-align:middle">
-            <span style="font-family:Georgia,serif;font-size:11px;font-weight:700;color:#ffffff;line-height:32px;display:block;letter-spacing:-.5px">{$pInit}</span>
-          </td>
+          {$brandCell}
           <td style="padding-left:10px;vertical-align:middle">
             <div style="font-size:14px;font-weight:600;color:#111827;letter-spacing:-.2px">{$pName}</div>
             <div style="font-size:10px;color:#9CA3AF;letter-spacing:.5px;text-transform:uppercase;margin-top:1px">{$pTagline}</div>
@@ -745,6 +762,7 @@ HTML;
         $strip = $actionLabel
             ? "<tr><td style='background:#FFFBEB;border-bottom:1px solid #FDE68A;padding:9px 40px;font-size:11px;font-weight:600;color:#92400E;letter-spacing:.3px'>&#9873; &nbsp;{$actionLabel}</td></tr>"
             : '';
+        $brandCell = self::brandCell($pName, $pInit);
 
         return <<<HTML
 <!DOCTYPE html>
@@ -769,9 +787,7 @@ table{border-spacing:0;border-collapse:collapse}td{padding:0}a{text-decoration:n
     <table width="100%" cellpadding="0" cellspacing="0"><tr>
       <td valign="middle">
         <table cellpadding="0" cellspacing="0"><tr>
-          <td style="background:#111827;border-radius:6px;width:32px;height:32px;text-align:center;vertical-align:middle">
-            <span style="font-family:Georgia,serif;font-size:11px;font-weight:700;color:#ffffff;line-height:32px;display:block;letter-spacing:-.5px">{$pInit}</span>
-          </td>
+          {$brandCell}
           <td style="padding-left:10px;vertical-align:middle">
             <div style="font-size:14px;font-weight:600;color:#111827;letter-spacing:-.2px">{$pName}</div>
             <div style="font-size:10px;color:#9CA3AF;letter-spacing:.5px;text-transform:uppercase;margin-top:1px">{$pTagline}</div>

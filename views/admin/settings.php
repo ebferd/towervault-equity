@@ -30,9 +30,14 @@
           <div style="font-size:11px;color:var(--text3);margin-top:4px">When set, users are sent here after signing out — useful when using a custom frontend.</div>
         </div>
         <div class="fg">
-          <label class="fl">Platform Logo <span class="fl-opt">(PNG, JPG — max 2MB)</span></label>
+          <label class="fl">Platform Logo <span class="fl-opt">(PNG, JPG — max 2MB. Shown in the sidebar, login pages and emails)</span></label>
           <?php if (!empty($branding['platform_logo'])): ?><div style="margin-bottom:.65rem"><img src="<?= file_url($branding['platform_logo']) ?>" style="height:40px;border:1px solid var(--border);border-radius:var(--r);padding:4px" alt="Logo"/></div><?php endif; ?>
           <input type="file" class="fi" name="platform_logo" accept=".jpg,.jpeg,.png,.webp" style="padding:7px 12px"/>
+        </div>
+        <div class="fg">
+          <label class="fl">Favicon <span class="fl-opt">(browser tab icon — square PNG, ICO or SVG. Falls back to the logo if empty)</span></label>
+          <?php if (!empty($branding['platform_favicon'])): ?><div style="margin-bottom:.65rem"><img src="<?= file_url($branding['platform_favicon']) ?>" style="height:32px;width:32px;object-fit:contain;border:1px solid var(--border);border-radius:var(--r);padding:4px" alt="Favicon"/></div><?php endif; ?>
+          <input type="file" class="fi" name="platform_favicon" accept=".jpg,.jpeg,.png,.webp,.ico,.svg" style="padding:7px 12px"/>
         </div>
       </div>
     </div>

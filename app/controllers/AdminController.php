@@ -950,9 +950,19 @@ class AdminController {
         }
 
         // Logo upload
-        if (!empty($_FILES['platform_logo']['name'])) {
-            $logoPath = upload_file($_FILES['platform_logo'], CONFIG['upload']['logo_path'], CONFIG['upload']['img_types']);
-            if ($logoPath) DB::execute("UPDATE platform_settings SET setting_value=? WHERE setting_key='platform_logo'", [$logoPath]);
+        // Logo + favicon uploads (upsert so a missing row is created, not silently skipped)
+        foreach (['platform_logo' => 'branding', 'platform_favicon' => 'branding'] as $field => $group) {
+            if (empty($_FILES[$field]['name'])) continue;
+            $types = CONFIG['upload']['img_types'];
+            if ($field === 'platform_favicon') $types = array_merge($types, ['ico', 'svg']);
+            $path = upload_file($_FILES[$field], CONFIG['upload']['logo_path'], $types);
+            if ($path) {
+                DB::query(
+                    "INSERT INTO platform_settings (setting_key, setting_value, setting_group) VALUES (?,?,?)
+                     ON DUPLICATE KEY UPDATE setting_value=?, updated_at=NOW()",
+                    [$field, $path, $group, $path]
+                );
+            }
         }
 
         audit_log($adminId, 'settings_updated', 'Platform settings updated', 'high', 'platform', null, 'Platform Settings');

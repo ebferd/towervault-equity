@@ -9,12 +9,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/css/auth.css?v=<?= filemtime(ROOT.'/assets/css/auth.css') ?>"/>
+<?= favicon_tag() ?><link rel="stylesheet" href="/assets/css/auth.css?v=<?= filemtime(ROOT.'/assets/css/auth.css') ?>"/>
 </head>
 <body class="auth-body">
 <?php
 $pName    = platform_setting('platform_name', 'NexVest');
 $pInit    = platform_setting('platform_initials', 'N');
+$pLogo    = platform_setting('platform_logo', '');
 $pTagline = platform_setting('platform_tagline', 'Capital Group');
 
 $authHeadline = platform_setting('auth_headline', 'Capital that compounds quietly.');
@@ -30,7 +31,11 @@ $authStats = [
   <!-- ============ BRAND PANEL (desktop only) ============ -->
   <aside class="brand">
     <div class="brand-logo">
-      <div class="logo-mark"><?= htmlspecialchars($pInit) ?></div>
+      <?php if ($pLogo): ?>
+        <img src="<?= file_url($pLogo) ?>" alt="<?= htmlspecialchars($pName) ?>" style="width:38px;height:38px;object-fit:contain;border-radius:9px;flex-shrink:0"/>
+      <?php else: ?>
+        <div class="logo-mark"><?= htmlspecialchars($pInit) ?></div>
+      <?php endif; ?>
       <span class="logo-word"><?= htmlspecialchars($pName) ?></span>
     </div>
 
@@ -68,7 +73,11 @@ $authStats = [
   <main class="panel">
 
     <div class="mobile-bar">
-      <div class="mobile-logo"><?= htmlspecialchars($pInit) ?></div>
+      <?php if ($pLogo): ?>
+        <img src="<?= file_url($pLogo) ?>" alt="<?= htmlspecialchars($pName) ?>" style="width:30px;height:30px;object-fit:contain;border-radius:8px;flex-shrink:0"/>
+      <?php else: ?>
+        <div class="mobile-logo"><?= htmlspecialchars($pInit) ?></div>
+      <?php endif; ?>
       <span class="mobile-word"><?= htmlspecialchars($pName) ?></span>
     </div>
 

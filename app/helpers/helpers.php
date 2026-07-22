@@ -322,6 +322,39 @@ function file_url(string $path): string {
     return $basePath . '/' . ltrim($pathNorm, '/');
 }
 
+/**
+ * Absolute (scheme + host) URL for a stored file. Emails cannot use relative
+ * paths, so anything rendered into an email must go through this.
+ */
+function file_url_abs(string $path): string {
+    $rel  = file_url($path);
+    $base = (string) (CONFIG['app']['url'] ?? platform_setting('platform_website', ''));
+    $p    = parse_url(rtrim($base, '/'));
+    if (empty($p['host'])) return $rel;
+    $origin = ($p['scheme'] ?? 'https') . '://' . $p['host'] . (isset($p['port']) ? ':' . $p['port'] : '');
+    return $origin . $rel;
+}
+
+/**
+ * <link> tags for the browser tab icon. Uses the uploaded favicon, falling
+ * back to the platform logo so the tab is never blank once a logo is set.
+ */
+function favicon_tag(): string {
+    $fav = (string) (platform_setting('platform_favicon', '') ?: platform_setting('platform_logo', ''));
+    if (trim($fav) === '') return '';
+    $url  = htmlspecialchars(file_url($fav), ENT_QUOTES);
+    $ext  = strtolower(pathinfo($fav, PATHINFO_EXTENSION));
+    $type = match ($ext) {
+        'png'  => 'image/png',
+        'webp' => 'image/webp',
+        'ico'  => 'image/x-icon',
+        'svg'  => 'image/svg+xml',
+        default => 'image/jpeg',
+    };
+    return '<link rel="icon" type="' . $type . '" href="' . $url . '"/>' . "\n"
+         . '<link rel="apple-touch-icon" href="' . $url . '"/>' . "\n";
+}
+
 // ── Investment calculation helpers ────────────────────────────
 
 function calc_maturity_date(string $startDate, int $durationValue, string $durationUnit): string {
