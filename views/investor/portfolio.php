@@ -350,17 +350,72 @@ endif;
     </div>
   </div>
 </div>
+
+<!-- ── Auto-reinvest confirmation ──────────────────────────────── -->
+<div id="rein-modal" class="modal-overlay" style="display:none">
+  <div class="modal" style="max-width:450px">
+    <div class="modal-head">
+      <h3 class="modal-title" id="rein-title">Turn on auto-reinvest?</h3>
+      <button class="modal-close" onclick="closeReinModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="rein-explain" style="font-size:13.5px;line-height:1.75;color:var(--mist-600)"></div>
+      <div id="rein-alert" style="margin-top:.85rem"></div>
+      <div style="display:flex;gap:.6rem;margin-top:1.35rem">
+        <button class="qbtn outline" style="flex:1" onclick="closeReinModal()">Cancel</button>
+        <button class="qbtn primary" style="flex:1" id="rein-confirm">Yes, turn it on</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
-// ── Auto-reinvest toggle ───────────────────────────────────────
-document.addEventListener('click', async function(e) {
+// ── Auto-reinvest toggle (asks for confirmation first) ─────────
+var REIN_ON_TEXT =
+  '<p style="margin:0 0 .7rem"><strong>Auto-reinvest</strong> puts each payout straight back into this investment instead of paying it into your wallet.</p>' +
+  '<ul style="margin:0 0 .7rem;padding-left:1.1rem">' +
+  '<li style="margin-bottom:.35rem">Your invested amount grows with every payout, so later returns are worked out on a larger balance.</li>' +
+  '<li style="margin-bottom:.35rem">While it is on, these payouts will <strong>not</strong> arrive as cash in your wallet.</li>' +
+  '<li>You can switch it off at any time — payouts then go to your wallet as normal.</li>' +
+  '</ul>' +
+  '<p style="margin:0;color:var(--mist-400);font-size:12.5px">Your original amount is still returned at maturity.</p>';
+
+var REIN_OFF_TEXT =
+  '<p style="margin:0 0 .7rem">Turning <strong>auto-reinvest</strong> off means future payouts for this investment will be paid into your <strong>wallet as cash</strong>, instead of being added back into the investment.</p>' +
+  '<p style="margin:0;color:var(--mist-400);font-size:12.5px">Anything already reinvested stays invested. You can turn it back on at any time.</p>';
+
+var reinPending = null;
+
+document.addEventListener('click', function(e) {
   const btn = e.target.closest('.reinvest-toggle');
   if (!btn) return;
-  btn.disabled = true;
+  const turningOn = !btn.classList.contains('reinvest-on');
+  reinPending = btn;
+  document.getElementById('rein-title').textContent   = turningOn ? 'Turn on auto-reinvest?' : 'Turn off auto-reinvest?';
+  document.getElementById('rein-explain').innerHTML   = turningOn ? REIN_ON_TEXT : REIN_OFF_TEXT;
+  document.getElementById('rein-alert').innerHTML     = '';
+  const c = document.getElementById('rein-confirm');
+  c.textContent = turningOn ? 'Yes, turn it on' : 'Yes, turn it off';
+  c.disabled = false;
+  document.getElementById('rein-modal').style.display = 'flex';
+});
+
+function closeReinModal() {
+  document.getElementById('rein-modal').style.display = 'none';
+  reinPending = null;
+}
+
+document.getElementById('rein-confirm').addEventListener('click', async function() {
+  if (!reinPending) return;
+  const btn = reinPending, c = this;
+  const original = c.textContent;
+  c.disabled = true; c.textContent = 'Saving…';
+
   const fd = new FormData();
-  fd.append('_token', document.querySelector('meta[name="csrf"]')?.content || '');
   fd.append('holding_id', btn.dataset.id);
   const data = await post('/investor/reinvest', fd, true);
-  btn.disabled = false;
+
+  c.disabled = false;
   if (data.success) {
     const on = data.auto_reinvest === 1;
     btn.classList.toggle('reinvest-on', on);
@@ -369,7 +424,17 @@ document.addEventListener('click', async function(e) {
     const lbl = document.getElementById('rlbl-' + btn.dataset.id);
     if (dot) dot.classList.toggle('on', on);
     if (lbl) lbl.textContent = on ? 'Auto-reinvest on' : 'Auto-reinvest off';
+    closeReinModal();
+  } else {
+    c.textContent = original;
+    document.getElementById('rein-alert').innerHTML =
+      '<div class="alert alert-err">' + (data.error || 'Could not update auto-reinvest.') + '</div>';
   }
+});
+
+// Close when clicking the dark backdrop
+document.getElementById('rein-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeReinModal();
 });
 
 // ── Overflow menus ─────────────────────────────────────────────
