@@ -230,14 +230,41 @@ function platform_settings_group(string $group): array {
 }
 
 /**
+ * Pages where the live-chat bubble is actually shown. The script still LOADS on
+ * every page (so visitor tracking keeps working), it is just hidden elsewhere.
+ * Add more paths here if you want the bubble in more places.
+ */
+function live_chat_visible_paths(): array {
+    return ['/investor/support'];
+}
+
+/** True when the current request is a page that should display the chat bubble. */
+function live_chat_is_visible_here(): bool {
+    $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/';
+    foreach (live_chat_visible_paths() as $p) {
+        if (str_starts_with($path, $p) || str_ends_with(rtrim($path, '/'), $p)) return true;
+    }
+    return false;
+}
+
+/**
  * Output third-party live-chat / widget code (e.g. Smartsupp) saved in admin
  * settings. Printed raw and unescaped — it is trusted admin-entered markup.
+ *
+ * The script loads on every page so Smartsupp still reports who is on the site
+ * and which page they are viewing. The chat bubble itself is hidden unless the
+ * visitor is on a page listed in live_chat_visible_paths() — this keeps the
+ * tracking benefit without a chat bubble following people around the site.
  */
 function render_live_chat(): void {
     $code = platform_setting('smartsupp_code', '');
-    if (is_string($code) && trim($code) !== '') {
-        echo "\n" . $code . "\n";
-    }
+    if (!is_string($code) || trim($code) === '') return;
+
+    echo "\n" . $code . "\n";
+
+    // Smartsupp API: chat:hide keeps the session/tracking alive, it only hides the widget.
+    $cmd = live_chat_is_visible_here() ? 'show' : 'hide';
+    echo '<script>(function(){function q(){if(window.smartsupp){smartsupp("chat:' . $cmd . '");}else{setTimeout(q,300);}}q();})();</script>' . "\n";
 }
 
 // ── File Upload ───────────────────────────────────────────────

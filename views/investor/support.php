@@ -18,6 +18,11 @@
 .supp-reply textarea{flex:1;padding:.65rem .9rem;border:1px solid var(--border);border-radius:10px;font-size:13px;font-family:'Inter',sans-serif;resize:vertical;min-height:80px;outline:none;color:var(--text);background:var(--surface);transition:border-color .15s}
 .supp-reply textarea:focus{border-color:var(--em-500)}
 @media(max-width:500px){.supp-bubble-inner{max-width:95%}}
+.supp-chat-cta{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.1rem 1.35rem;margin-bottom:1.25rem}
+.supp-chat-title{font-size:14px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:.5rem}
+.supp-chat-dot{width:8px;height:8px;border-radius:50%;background:var(--em-600);flex-shrink:0}
+.supp-chat-sub{font-size:12.5px;color:var(--text3);margin-top:.25rem;max-width:52ch;line-height:1.55}
 </style>
 
 <div class="supp-head">
@@ -30,6 +35,25 @@
     New Ticket
   </button>
 </div>
+
+<?php if (trim((string) platform_setting('smartsupp_code', '')) !== ''): ?>
+<!-- Live chat is only surfaced here; it stays hidden (but tracking) site-wide -->
+<div class="supp-chat-cta">
+  <div>
+    <div class="supp-chat-title"><span class="supp-chat-dot"></span>Live chat</div>
+    <div class="supp-chat-sub">Chat with our team in real time for quick questions. For anything that needs a written record, raise a ticket below.</div>
+  </div>
+  <button type="button" class="qbtn primary" style="height:38px;white-space:nowrap" onclick="startLiveChat()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+    Start live chat
+  </button>
+</div>
+<script>
+function startLiveChat(){
+  if (window.smartsupp) { smartsupp('chat:show'); smartsupp('chat:open'); }
+}
+</script>
+<?php endif; ?>
 
 <!-- New Ticket Form -->
 <div id="new-ticket-form" style="display:none" class="supp-new-form">
