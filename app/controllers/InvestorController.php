@@ -1363,7 +1363,12 @@ class InvestorController {
 
         // Brand + signatories — all configurable (never hardcoded)
         $brand      = $pName;
-        $brandSp    = trim(implode(' ', str_split(mb_strtoupper($brand))));
+        $initials   = htmlspecialchars(mb_strtoupper($pInit));      // dynamic monogram
+        $brandSp    = htmlspecialchars(mb_strtoupper($brand));      // masthead wordmark
+        // Scale the masthead down for longer names so it never runs off the page
+        $bl         = mb_strlen($brand);
+        $brandFs    = $bl > 18 ? 15 : ($bl > 13 ? 18 : 22);
+        $brandLs    = $bl > 18 ? 2  : ($bl > 13 ? 4  : 6);
         $tagline    = $pTagline;
         $sig1n      = platform_setting('cert_signatory1_name',  '');
         $sig1t      = platform_setting('cert_signatory1_title', 'Chief Investment Officer');
@@ -1387,7 +1392,7 @@ class InvestorController {
 
         // Decorative assets (generated as SVG, embedded as data URIs)
         $frameData  = 'data:image/svg+xml;base64,' . base64_encode(self::certFrameSvg());
-        $sealData   = 'data:image/svg+xml;base64,' . base64_encode(self::certSealSvg(mb_strtoupper($brand), 'OFFICIAL · CERTIFIED · SECURE'));
+        $sealData   = 'data:image/svg+xml;base64,' . base64_encode(self::certSealSvg(mb_strtoupper($brand), 'OFFICIAL · CERTIFIED · SECURE', mb_strtoupper($pInit)));
         $flourishSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="150" height="14" viewBox="0 0 150 14"><g fill="none" stroke="#8f7230" stroke-width="1"><path d="M6 7H60"/><path d="M144 7H90"/><path d="M66 7 Q71 1.5 76 7 Q81 12.5 86 7"/></g><circle cx="76" cy="7" r="2" fill="#8f7230"/></svg>';
         $flourishData = 'data:image/svg+xml;base64,' . base64_encode($flourishSvg);
 
@@ -1446,9 +1451,9 @@ class InvestorController {
 <div class="frame-layer"><img src="$frameData" style="width:210mm;height:297mm;"/></div>
 <div class="sheet">
   <div class="tc">
-    <div class="brandmark">NV</div>
-    <div class="brand">$brandSp</div>
-    <div class="bsub">$taglineTxt &middot; Established MMXXIV</div>
+    <div class="brandmark">$initials</div>
+    <div class="brand" style="font-size:{$brandFs}px;letter-spacing:{$brandLs}px">$brandSp</div>
+    <div class="bsub">$taglineTxt</div>
     <div class="hr"></div>
   </div>
 
@@ -1460,7 +1465,7 @@ class InvestorController {
 
   <div class="tc" style="margin-top:12px">
     <span class="iname">$fullName</span>
-    <div class="imeta">$email &nbsp;&middot;&nbsp; $country</div>
+    <div class="imeta">$country</div>
   </div>
 
   <p class="recital">has made a confirmed and legally binding subscription to the investment product particularised below, offered through $brandTxt $taglineTxt, subject to the terms of the executed investment agreement.</p>
@@ -1585,7 +1590,7 @@ HTML;
         return $s . '</svg>';
     }
 
-    private static function certSealSvg(string $brandUpper, string $subUpper): string {
+    private static function certSealSvg(string $brandUpper, string $subUpper, string $initials = 'NV'): string {
         $gold = '#8f7230'; $ink = '#0F2A20'; $cx = 75; $cy = 75;
         $s = '<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150">';
         foreach ([[72, 1.5], [66, 1], [47, 1], [44, 3]] as $p) {
@@ -1616,8 +1621,9 @@ HTML;
         };
         $arc($brandUpper, 56, 180, 360, 8, false);
         $arc($subUpper,   54, 180, 0,   7, true);
-        $s .= '<text x="75" y="82" font-family="dejavuserif,serif" font-size="26" font-weight="bold" fill="' . $ink . '" text-anchor="middle">NV</text>';
-        $s .= '<text x="75" y="95" font-family="dejavuserif,serif" font-size="7" fill="' . $gold . '" text-anchor="middle">MMXXIV</text>';
+        $mono = htmlspecialchars($initials !== '' ? $initials : 'NV', ENT_QUOTES);
+        $monoFs = mb_strlen($mono) >= 4 ? 16 : (mb_strlen($mono) === 3 ? 21 : 26);
+        $s .= '<text x="75" y="' . ($cy + 6) . '" font-family="dejavuserif,serif" font-size="' . $monoFs . '" font-weight="bold" fill="' . $ink . '" text-anchor="middle">' . $mono . '</text>';
         return $s . '</svg>';
     }
 
