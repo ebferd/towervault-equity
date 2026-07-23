@@ -1442,7 +1442,7 @@ class InvestorController {
   .org { font-size:8px; letter-spacing:1.5px; color:#3a4f42; text-transform:uppercase; margin-top:2px; }
   .sealcell { text-align:center; vertical-align:bottom; }
   table.foot { width:100%; margin-top:16px; border-top:1px solid #b79a56; }
-  .verify { font-size:9px; color:#3a4f42; line-height:1.6; padding-top:9px; }
+  .verify { font-size:9px; color:#3a4f42; line-height:1.6; padding-top:9px; text-align:center; }
   .verify b { color:#0F2A20; letter-spacing:1px; }
   .micro { font-size:4.5px; letter-spacing:.4px; color:#8f7230; text-transform:uppercase; }
 </style>
@@ -1514,7 +1514,7 @@ class InvestorController {
   <table class="foot">
     <tr>
       <td class="verify">Verify the authenticity of this certificate at<br/><b>$verifyHost</b> &nbsp;&middot;&nbsp; Ref $certRef
-        <div class="micro">$brandTxt &middot; CERTIFIED INVESTMENT &middot; $brandTxt &middot; CERTIFIED INVESTMENT &middot; $brandTxt &middot; CERTIFIED INVESTMENT</div>
+        <div class="micro">$brandTxt &middot; CERTIFIED INVESTMENT &middot; $brandTxt &middot; CERTIFIED INVESTMENT</div>
       </td>
     </tr>
   </table>
