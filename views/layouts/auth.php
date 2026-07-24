@@ -82,7 +82,7 @@ $authStats = [
     </div>
 
     <div class="utility-row">
-      <div id="google_translate_element"></div>
+      <?php $langVariant='light'; include ROOT.'/views/components/lang_switcher.php'; ?>
       <a href="mailto:<?= htmlspecialchars(platform_setting('platform_support_email', platform_setting('platform_email','support@nexvest.com'))) ?>" class="help-link">Need help?</a>
     </div>
 
@@ -95,12 +95,6 @@ $authStats = [
 </div>
 
 <script src="/assets/js/app.js"></script>
-<script type="text/javascript">
-function googleTranslateElementInit(){
-  new google.translate.TranslateElement({pageLanguage:'en',layout:google.translate.TranslateElement.InlineLayout.SIMPLE},'google_translate_element');
-}
-</script>
-<script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 <?php render_live_chat(); ?>
 </body>
 </html>

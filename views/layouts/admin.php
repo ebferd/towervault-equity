@@ -9,11 +9,6 @@
 <?= favicon_tag() ?><link rel="stylesheet" href="/assets/css/app.css?v=<?= filemtime(ROOT.'/assets/css/app.css') ?>"/>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
-  .goog-te-banner-frame,.skiptranslate{display:none!important}
-  body{top:0!important}
-  #google_translate_element .goog-te-gadget{font-size:0}
-  #google_translate_element select{background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:4px 8px;font-size:11.5px;cursor:pointer;outline:none}
-  #google_translate_element select:hover{background:rgba(255,255,255,.14)}
   :root { --accent:#C0392B; --accent-h:#a93226; --accent-l:#FDF2F2; --accent-m:#FCCACA; --accent-glow:rgba(192,57,43,.15); }
   .sb-item.active { background:rgba(192,57,43,.2); }
   .sb-item.active::before { background:linear-gradient(180deg,var(--red),#e05c50); }
@@ -91,7 +86,6 @@ $nav = [
           <div class="sb-uemail"><?= htmlspecialchars(str_replace('_',' ',ucwords($adminRole,'_'))) ?></div>
         </div>
       </div>
-      <div id="google_translate_element" style="margin-bottom:.6rem"></div>
       <form method="POST" action="/admin/logout">
         <input type="hidden" name="_token" value="<?= csrf_token() ?>"/>
         <button type="submit" class="sb-logout"><?= svgIcon('logout',14,'rgba(255,255,255,.3)') ?>Sign Out</button>
@@ -108,6 +102,7 @@ $nav = [
         </div>
       </div>
       <div class="tb-right">
+        <?php $langVariant='dark'; include ROOT.'/views/components/lang_switcher.php'; ?>
         <span class="tb-clock" id="topbar-clock"></span>
         <?php $totalPending = $pendingKyc + $pendingWr + $openTix + $pendingDep; ?>
         <div style="position:relative">
@@ -185,11 +180,5 @@ document.getElementById('announce-form').addEventListener('submit', async e => {
   if (data.success) { e.target.reset(); setTimeout(() => { document.getElementById('announce-modal').style.display='none'; document.getElementById('announce-result').innerHTML=''; }, 3000); }
 });
 </script>
-<script type="text/javascript">
-function googleTranslateElementInit(){
-  new google.translate.TranslateElement({pageLanguage:'en',layout:google.translate.TranslateElement.InlineLayout.SIMPLE},'google_translate_element');
-}
-</script>
-<script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </body>
 </html>
