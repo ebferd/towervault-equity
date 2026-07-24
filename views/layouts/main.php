@@ -108,7 +108,7 @@ $nav = [
         </div>
       </div>
       <div class="tb-right">
-        <div id="google_translate_element"></div>
+        <?php $langVariant='light'; include ROOT.'/views/components/lang_switcher.php'; ?>
 
         <div class="dropdown">
           <button class="tb-icon-btn" id="notif-btn" aria-label="Notifications">
@@ -172,12 +172,6 @@ $nav = [
     });
   }
 </script>
-<script type="text/javascript">
-function googleTranslateElementInit(){
-  new google.translate.TranslateElement({pageLanguage:'en',layout:google.translate.TranslateElement.InlineLayout.SIMPLE},'google_translate_element');
-}
-</script>
-<script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 <?php render_live_chat(); ?>
 </body>
 </html>
