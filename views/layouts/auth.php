@@ -72,18 +72,20 @@ $authStats = [
   <!-- ============ FORM PANEL ============ -->
   <main class="panel">
 
-    <div class="mobile-bar">
-      <?php if ($pLogo): ?>
-        <img src="<?= file_url($pLogo) ?>" alt="<?= htmlspecialchars($pName) ?>" style="width:30px;height:30px;object-fit:contain;border-radius:8px;flex-shrink:0"/>
-      <?php else: ?>
-        <div class="mobile-logo"><?= htmlspecialchars($pInit) ?></div>
-      <?php endif; ?>
-      <span class="mobile-word"><?= htmlspecialchars($pName) ?></span>
-    </div>
+    <div class="panel-top">
+      <div class="mobile-bar">
+        <?php if ($pLogo): ?>
+          <img src="<?= file_url($pLogo) ?>" alt="<?= htmlspecialchars($pName) ?>" style="width:30px;height:30px;object-fit:contain;border-radius:8px;flex-shrink:0"/>
+        <?php else: ?>
+          <div class="mobile-logo"><?= htmlspecialchars($pInit) ?></div>
+        <?php endif; ?>
+        <span class="mobile-word"><?= htmlspecialchars($pName) ?></span>
+      </div>
 
-    <div class="utility-row">
-      <?php $langVariant='light'; include ROOT.'/views/components/lang_switcher.php'; ?>
-      <a href="mailto:<?= htmlspecialchars(platform_setting('platform_support_email', platform_setting('platform_email','support@nexvest.com'))) ?>" class="help-link">Need help?</a>
+      <div class="utility-row">
+        <?php $langVariant='light'; include ROOT.'/views/components/lang_switcher.php'; ?>
+        <a href="mailto:<?= htmlspecialchars(platform_setting('platform_support_email', platform_setting('platform_email','support@nexvest.com'))) ?>" class="help-link">Need help?</a>
+      </div>
     </div>
 
     <div class="form-wrap">

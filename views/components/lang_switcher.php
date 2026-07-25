@@ -117,19 +117,29 @@ body{top:0!important;position:static!important}
     current.textContent = found ? found.name : 'English';
   }
 
+  // Every domain scope a googtrans cookie could live on: host-only, host with a
+  // leading dot, and every parent domain (e.g. equity.example.com AND .example.com).
+  // A cookie left on ANY of these keeps Google translating, so we must cover them all.
+  function cookieScopes(){
+    var parts=location.hostname.split('.'), scopes=[''];
+    for(var i=0;i<parts.length-1;i++){
+      var d=parts.slice(i).join('.');
+      scopes.push('; domain='+d, '; domain=.'+d);
+    }
+    return scopes;
+  }
+
   function setLang(code){
-    // Drive Google Translate via the googtrans cookie, then reload. This is the
-    // reliable trigger AND it persists the choice across pages (login → register,
-    // page to page in the admin) instead of resetting on every navigation.
-    var host=location.hostname, dead='; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    ['','; domain='+host,'; domain=.'+host].forEach(function(scope){
-      document.cookie='googtrans='+dead+'; path=/'+scope;
-    });
+    // Drive Google Translate via the googtrans cookie, then reload. Persists the
+    // choice across pages instead of resetting on every navigation.
+    var scopes=cookieScopes(), dead='; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    // 1) wipe any existing googtrans cookie on every scope (this is what makes
+    //    switching back to English actually work)
+    scopes.forEach(function(s){ document.cookie='googtrans='+dead+'; path=/'+s; });
+    // 2) for a non-English language, set the cookie so Google translates on reload
     if(code!=='en'){
-      var v='googtrans=/en/'+code;
-      ['','; domain='+host,'; domain=.'+host].forEach(function(scope){
-        document.cookie=v+'; path=/'+scope;
-      });
+      var v='googtrans=/en/'+code+'; path=/';
+      scopes.forEach(function(s){ document.cookie=v+s; });
     }
     close();
     location.reload();

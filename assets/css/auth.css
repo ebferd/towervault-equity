@@ -49,10 +49,12 @@ body.auth-body{font-family:'Inter',sans-serif;color:var(--mist-900);background:#
 
 /* ---------- form panel ---------- */
 .panel{flex:1;display:flex;flex-direction:column;min-height:100vh}
-.mobile-bar{display:flex;align-items:center;gap:10px;padding:1.5rem 1.5rem 0}
+/* Mobile: brand on the left, language + help on the right, one tidy row */
+.panel-top{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:1.25rem 1.25rem 0;flex-wrap:wrap}
+.mobile-bar{display:flex;align-items:center;gap:10px;padding:0}
 .mobile-logo{width:28px;height:28px;border-radius:7px;background:var(--ink-900);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:600;font-size:13px;color:var(--em-400)}
 .mobile-word{font-size:14px;font-weight:600;color:var(--mist-900)}
-.utility-row{display:flex;align-items:center;justify-content:flex-end;gap:1rem;padding:1.5rem 2.5rem 0;min-height:24px}
+.utility-row{display:flex;align-items:center;justify-content:flex-end;gap:1rem;padding:0;min-height:24px}
 .help-link{font-size:13px;color:var(--mist-500)}
 .help-link:hover{color:var(--mist-700)}
 .form-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:2.5rem 1.5rem}
@@ -151,4 +153,7 @@ body.auth-body{top:0!important}
 @media (min-width:1024px){
   .brand{display:flex}
   .mobile-bar{display:none}
+  /* Desktop: no brand row — just the language + help, top-right as before */
+  .panel-top{display:block;padding:0}
+  .utility-row{padding:1.5rem 2.5rem 0}
 }
