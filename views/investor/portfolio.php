@@ -11,11 +11,9 @@ function holdingDuration(array $h): string {
     return $v . ' ' . ($v === 1 ? rtrim($u,'s') : $u);
 }
 function holdingExpectedReturn(array $h): float {
-    $roi  = (float)($h['roi'] ?? $h['inv_roi'] ?? 0);
-    $v    = (int)($h['duration_value'] ?? 0);
-    $u    = $h['duration_unit'] ?? 'months';
-    $yrs  = match($u) { 'years' => $v, 'days' => $v / 365, default => $v / 12 };
-    return (float)$h['amount'] * $roi / 100 * $yrs;
+    // ROI is the TOTAL return over the full duration (not annual)
+    $roi = (float)($h['roi'] ?? $h['inv_roi'] ?? 0);
+    return (float)$h['amount'] * $roi / 100;
 }
 function holdingProgress(array $h): int {
     if (empty($h['start_date']) || empty($h['end_date'])) return 0;
