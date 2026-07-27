@@ -216,6 +216,42 @@ class AdminController {
         json_response(['success' => true]);
     }
 
+    // ── Partner (special agent) status ─────────────────────────
+    public static function setPartner(): void {
+        AuthMiddleware::admin();
+        AuthMiddleware::verifyCsrf();
+        $adminId = current_admin_id();
+        $id      = (int) ($_GET['id'] ?? 0);
+        $user    = DB::fetch("SELECT * FROM users WHERE id=?", [$id]);
+        if (!$user) json_response(['success' => false, 'error' => 'Investor not found.']);
+
+        $enable = input('is_agent', '0') === '1';
+        $name   = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+
+        if (!$enable) {
+            DB::execute("UPDATE users SET is_agent=0 WHERE id=?", [$id]);
+            audit_log($adminId, 'partner_disabled', "Removed Partner status from user #{$id}", 'medium', 'user', $id, $name);
+            json_response(['success' => true, 'message' => 'Partner status removed. Existing referral rates are unchanged.']);
+        }
+
+        $rate = (float) input('agent_commission', 0);
+        if ($rate <= 0 || $rate > 100) {
+            json_response(['success' => false, 'error' => 'Enter a commission rate between 0.1 and 100.']);
+        }
+
+        $wasAgent    = (int) ($user['is_agent'] ?? 0) === 1;
+        $rateChanged = !$wasAgent || (float) ($user['agent_commission'] ?? 0) !== $rate;
+
+        DB::execute("UPDATE users SET is_agent=1, agent_commission=? WHERE id=?", [$rate, $id]);
+        audit_log($adminId, 'partner_enabled', "Set Partner ({$rate}%) for user #{$id}", 'medium', 'user', $id, $name);
+
+        // Email the investor when newly activated or their rate changed
+        if ($rateChanged) {
+            try { Mailer::sendPartnerUpgrade($user, $rate); } catch (\Throwable $e) { error_log('Partner email error: ' . $e->getMessage()); }
+        }
+        json_response(['success' => true, 'message' => 'Partner status saved' . ($rateChanged ? ' — notification email sent.' : '.')]);
+    }
+
     // ── Ghost Login ────────────────────────────────────────────
     public static function ghostLogin(): void {
         AuthMiddleware::admin();
@@ -646,7 +682,10 @@ class AdminController {
                     [$invoice['user_id']]
                 );
                 if ($referral) {
-                    $commRate   = (float) platform_setting('referral_commission', '5');
+                    // Use the rate captured on the referral at signup (Partner rate for
+                    // Partner referrals), falling back to the global rate for old rows.
+                    $commRate   = (float) ($referral['commission_rate'] ?? platform_setting('referral_commission', '5'));
+                    if ($commRate <= 0) $commRate = (float) platform_setting('referral_commission', '5');
                     $commission = round((float)$invoice['amount'] * $commRate / 100, 2);
                     if ($commission > 0) {
                         $commRef = generate_reference('COM');

@@ -699,6 +699,25 @@ HTML;
             self::wrap($content, "+{$fmtCom} referral commission credited!"));
     }
 
+    public static function sendPartnerUpgrade(array $user, float $rate): bool {
+        $pName    = platform_setting('platform_name', 'NexVest');
+        $url      = rtrim(platform_setting('platform_website', 'https://nexvest.com'), '/');
+        $stdRate  = rtrim(rtrim(number_format((float)platform_setting('referral_commission','5'),2),'0'),'.');
+        $fmtRate  = rtrim(rtrim(number_format($rate,2),'0'),'.') . '%';
+
+        $content = self::greeting($user)
+            . self::eyebrow('Partner Program')
+            . self::heading('You&rsquo;ve been upgraded to Partner.')
+            . self::body("Your account has been upgraded to <strong>Partner</strong> status. From now on you earn an elevated commission on every investment made by people who join {$pName} through your referral link.")
+            . self::amountCard($fmtRate, 'Your Partner commission rate', 'Standard rate is ' . $stdRate . '%')
+            . self::body("Your referral link stays the same, and your elevated rate applies to referrals going forward. Track everyone you refer and your commission from the Partner area of your portal.")
+            . self::btn('View your Partner dashboard', $url . '/investor/referrals')
+            . self::signoff();
+
+        return self::send($user['email'], $user['first_name'], "You&rsquo;re now a {$pName} Partner",
+            self::wrap($content, "You've been upgraded to Partner — {$fmtRate} referral commission."));
+    }
+
     public static function sendAnnouncement(array $user, string $subject, string $message): bool {
         $pName = platform_setting('platform_name', 'NexVest');
         $content = self::greeting($user)

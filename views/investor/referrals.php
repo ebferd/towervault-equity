@@ -3,7 +3,10 @@
 $refLink  = 'https://' . ($_SERVER['HTTP_HOST'] ?? 'nexvest.com') . '/register?ref=' . ($user['referral_code'] ?? '');
 $pName    = platform_setting('platform_name', 'NexVest');
 $shareMsg = 'Join ' . $pName . ' and start earning passive income from real estate and index fund investments. Use my referral link: ' . $refLink;
-$commRate = (int) platform_setting('referral_commission', 5);
+$isPartner   = (int)($user['is_agent'] ?? 0) === 1;
+$stdRate     = rtrim(rtrim(number_format((float)platform_setting('referral_commission', 5), 2), '0'), '.');
+$partnerRate = $isPartner ? rtrim(rtrim(number_format((float)($user['agent_commission'] ?? 0), 2), '0'), '.') : $stdRate;
+$commRate    = $isPartner ? $partnerRate : $stdRate;
 ?>
 <style>
 .ref-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:.65rem;margin-bottom:1rem}
@@ -44,14 +47,55 @@ $commRate = (int) platform_setting('referral_commission', 5);
 .comm-desc{font-size:13px;font-weight:600;color:var(--mist-900)}
 .comm-date{font-size:11px;color:var(--mist-400);margin-top:.15rem}
 .comm-amt{font-size:14px;font-weight:700;color:var(--em-600)}
+
+/* ── Partner view ─────────────────────────────────────────── */
+.pt-hero{position:relative;border-radius:16px;overflow:hidden;padding:1.4rem 1.5rem;margin-bottom:1.25rem;color:#fff;
+  background:radial-gradient(130% 140% at 100% 0%, #1c4a3a 0%, #12352A 46%, #0d2a21 100%)}
+.pt-hero::after{content:"";position:absolute;right:-30px;top:-30px;width:170px;height:170px;border-radius:50%;
+  background:radial-gradient(circle, rgba(228,201,118,.2), transparent 62%);pointer-events:none}
+.pt-badge{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:#0e2a21;background:linear-gradient(135deg,#E4C976,#B48A2E);padding:5px 11px;border-radius:100px;margin-bottom:.8rem}
+.pt-eyebrow{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:rgba(228,201,118,.85);font-weight:600}
+.pt-hero h1{font-size:1.25rem;margin:.25rem 0 .2rem;letter-spacing:-.2px;color:#fff}
+.pt-hero p{font-size:12.5px;color:rgba(255,255,255,.72);line-height:1.55;max-width:44ch}
+.pt-rate{display:flex;align-items:baseline;gap:.7rem;flex-wrap:wrap;margin-top:1rem;padding-top:.9rem;border-top:1px solid rgba(255,255,255,.12)}
+.pt-rate .big{font-size:2.1rem;font-weight:800;line-height:1;background:linear-gradient(135deg,#fff,#E4C976);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.pt-rate .lbl{font-size:11.5px;color:rgba(255,255,255,.62);line-height:1.35}
+.pt-rate .lbl b{color:#fff;font-weight:600}
+.pt-rate .was{margin-left:auto;font-size:11px;color:rgba(255,255,255,.5);text-align:right}
+.pt-rate .was s{color:rgba(255,255,255,.4)}
+/* gold-accented stats + link card for partners */
+.is-partner .ref-stat{background:#FBF6E9;border-color:#EAD9A8}
+.is-partner .ref-stat-lbl{color:#9c8a55}
+.is-partner .ref-stat-val.green{color:var(--em-700)}
+.is-partner .r-card-icon{background:#FBF6E9}
+.is-partner .ref-av{background:#FBF6E9;color:#8a6a1f}
+@media(max-width:420px){.pt-rate .was{margin-left:0;text-align:left;width:100%}}
 </style>
 
+<div class="<?= $isPartner ? 'is-partner' : '' ?>">
+
+<?php if ($isPartner): ?>
+<!-- Partner hero -->
+<div class="pt-hero">
+  <span class="pt-badge"><svg width="11" height="11" viewBox="0 0 24 24" fill="#0e2a21"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> Partner</span>
+  <div class="pt-eyebrow">Your commission tier</div>
+  <h1>Partner Program</h1>
+  <p>You earn an elevated commission on every investment made by people you refer.</p>
+  <div class="pt-rate">
+    <span class="big"><?= $partnerRate ?>%</span>
+    <span class="lbl"><b>commission</b><br/>on referred investments</span>
+    <?php if ($partnerRate !== $stdRate): ?><span class="was">Standard rate<br/><s><?= $stdRate ?>%</s></span><?php endif; ?>
+  </div>
+</div>
+<?php else: ?>
 <div class="page-header">
   <div>
     <h1 class="greet">Referral Program</h1>
     <p class="greet-sub">Invite friends and earn <?= $commRate ?>% commission when they invest.</p>
   </div>
 </div>
+<?php endif; ?>
 
 <!-- Stats -->
 <div class="ref-stats">
@@ -185,3 +229,5 @@ $commRate = (int) platform_setting('referral_commission', 5);
   </div>
 </div>
 <?php endif; ?>
+
+</div><!-- /.is-partner wrapper -->

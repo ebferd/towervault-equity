@@ -147,10 +147,14 @@ class AuthController {
             );
 
             if ($referredBy) {
-                $rate = (float)platform_setting('referral_commission', '5');
+                $referrer = DB::fetch("SELECT * FROM users WHERE id=?", [$referredBy]);
+                // Partners earn an elevated commission. Snapshot the rate now so only
+                // referrals made after the referrer became a Partner get the higher rate.
+                $rate = ($referrer && (int)($referrer['is_agent'] ?? 0) === 1 && $referrer['agent_commission'] !== null)
+                        ? (float)$referrer['agent_commission']
+                        : (float)platform_setting('referral_commission', '5');
                 DB::query("INSERT INTO referrals (referrer_id, referred_id, commission_rate) VALUES (?,?,?)", [$referredBy, $userId, $rate]);
                 // Notify referrer by email (non-blocking)
-                $referrer = DB::fetch("SELECT * FROM users WHERE id=?", [$referredBy]);
                 $newUser  = ['first_name' => $firstName, 'last_name' => $lastName, 'email' => $email];
                 try { Mailer::sendReferralSignup($referrer, $newUser); } catch (Throwable $e) {}
             }

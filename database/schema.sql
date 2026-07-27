@@ -130,6 +130,8 @@ CREATE TABLE `users` (
   `withdrawals_disabled`    TINYINT(1)   NOT NULL DEFAULT 0,
   `min_investment_override` DECIMAL(15,2) DEFAULT NULL,
   `min_investment_note`     VARCHAR(500) DEFAULT NULL,
+  `is_agent`                TINYINT(1)   NOT NULL DEFAULT 0,
+  `agent_commission`        DECIMAL(5,2) DEFAULT NULL,
   `last_login_at`        DATETIME        DEFAULT NULL,
   `last_login_ip`        VARCHAR(45)     DEFAULT NULL,
   `created_at`           TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,

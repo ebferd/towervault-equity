@@ -140,6 +140,7 @@ Router::get('/admin/users/{id}',         [AdminController::class, 'userDetail'])
 Router::post('/admin/users/{id}',        [AdminController::class, 'updateUser']);
 Router::post('/admin/users/{id}/credit', [AdminController::class, 'creditWallet']);
 Router::post('/admin/users/{id}/suspend',[AdminController::class, 'suspendUser']);
+Router::post('/admin/users/{id}/partner',[AdminController::class, 'setPartner']);
 Router::get('/admin/ghost/{id}',         [AdminController::class, 'ghostLogin']);
 Router::get('/admin/ghost/exit',         [AdminController::class, 'exitGhost']);
 Router::get('/admin/kyc',                [AdminController::class, 'kycQueue']);

@@ -35,6 +35,7 @@
         <button class="btn btn-outline btn-sm btn-block" onclick="document.getElementById('debit-modal').style.display='flex'"><?= svgIcon('arrowUp',12) ?>Debit Wallet</button>
         <button class="btn btn-outline btn-sm btn-block" onclick="document.getElementById('email-modal').style.display='flex'"><?= svgIcon('send',12) ?>Email Investor</button>
         <button class="btn btn-outline btn-sm btn-block" onclick="document.getElementById('invoice-modal').style.display='flex'"><?= svgIcon('file',12) ?>Issue Invoice</button>
+        <button class="btn btn-outline btn-sm btn-block" style="<?= (int)($user['is_agent']??0)===1 ? 'border-color:#B48A2E;color:#8a6a1f;background:#FBF6E9' : '' ?>" onclick="document.getElementById('partner-modal').style.display='flex'"><?= svgIcon('star',12,(int)($user['is_agent']??0)===1?'#B48A2E':'currentColor') ?><?= (int)($user['is_agent']??0)===1 ? 'Partner ('.rtrim(rtrim(number_format((float)$user['agent_commission'],2),'0'),'.').'%)' : 'Make Partner' ?></button>
         <button class="btn btn-sm btn-block" style="background:var(--<?= $user['status']==='suspended'?'green':'red' ?>-bg);color:var(--<?= $user['status']==='suspended'?'green':'red' ?>);border:1px solid var(--<?= $user['status']==='suspended'?'green-b':'red-b' ?>)" onclick="toggleSuspend()"><?= svgIcon($user['status']==='suspended'?'check':'x',12,'currentColor') ?><?= $user['status']==='suspended'?'Unsuspend Account':'Suspend Account' ?></button>
       </div>
     </div>
@@ -337,6 +338,38 @@
   </div>
 </div>
 
+<!-- Partner modal -->
+<?php $globalComm = rtrim(rtrim(number_format((float)platform_setting('referral_commission','5'),2),'0'),'.'); $isPartner=(int)($user['is_agent']??0)===1; ?>
+<div id="partner-modal" class="modal-overlay" style="display:none">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-head">
+      <h3 class="modal-title"><?= svgIcon('star',15,'#B48A2E') ?> &nbsp;Partner Program</h3>
+      <button class="modal-close" onclick="document.getElementById('partner-modal').style.display='none'">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="partner-result"></div>
+      <p style="font-size:12.5px;color:var(--text2);line-height:1.6;margin-bottom:1rem">
+        Partners earn an elevated referral commission. The rate applies to <strong>new referrals going forward</strong>; existing referrals keep their original rate. The Partner receives an email when activated.
+      </p>
+      <form id="partner-form">
+        <div class="toggle-row" style="border:1px solid var(--border);border-radius:var(--r);padding:.85rem 1rem;margin-bottom:1rem">
+          <div><div class="tr-label">Partner status</div><div class="tr-sub">Grants the elevated commission &amp; Partner portal view</div></div>
+          <label class="toggle"><input type="hidden" name="is_agent" value="0"/><input type="checkbox" name="is_agent" id="partner-toggle" value="1" <?= $isPartner?'checked':'' ?> onchange="this.previousElementSibling.value=this.checked?'1':'0';document.getElementById('partner-rate-wrap').style.display=this.checked?'block':'none'"/><div class="t-track"></div><div class="t-thumb"></div></label>
+        </div>
+        <div class="fg" id="partner-rate-wrap" style="display:<?= $isPartner?'block':'none' ?>">
+          <label class="fl">Partner commission rate (%)</label>
+          <input class="fi" type="number" name="agent_commission" min="0.1" max="100" step="0.1" value="<?= $isPartner ? htmlspecialchars(rtrim(rtrim(number_format((float)$user['agent_commission'],2),'0'),'.')) : '' ?>" placeholder="e.g. 10"/>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Standard rate is <?= $globalComm ?>%. Enter this Partner's higher rate.</div>
+        </div>
+        <div style="display:flex;gap:.6rem;margin-top:.5rem">
+          <button type="button" class="btn btn-outline" style="flex:1" onclick="document.getElementById('partner-modal').style.display='none'">Cancel</button>
+          <button type="submit" class="btn btn-primary" style="flex:1">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <script>
 const TABS = ['holdings','transactions','referrals','tickets','sessions'];
 function showTab(t) {
@@ -356,6 +389,17 @@ async function walletAction(formId, resultId, modalId) {
 
 document.getElementById('credit-form').addEventListener('submit', e => { e.preventDefault(); walletAction('credit-form','credit-result','credit-modal'); });
 document.getElementById('debit-form').addEventListener('submit',  e => { e.preventDefault(); walletAction('debit-form','debit-result','debit-modal');   });
+
+document.getElementById('partner-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = e.target.querySelector('[type="submit"]'); setLoading(btn, true, 'Saving…');
+  const data = await post('/admin/users/<?= $user['id'] ?>/partner', new FormData(e.target), true);
+  setLoading(btn, false);
+  document.getElementById('partner-result').innerHTML = data.success
+    ? '<div class="alert alert-ok"><?= svgIcon('check',13,'var(--green)') ?> ' + data.message + '</div>'
+    : '<div class="alert alert-err">' + (data.error||'Failed.') + '</div>';
+  if (data.success) setTimeout(()=>location.reload(), 1400);
+});
 
 async function toggleSuspend() {
   const action = '<?= $user['status']==='suspended' ? 'unsuspend' : 'suspend' ?>';
