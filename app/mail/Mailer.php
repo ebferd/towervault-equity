@@ -714,7 +714,7 @@ HTML;
             . self::btn('View your Partner dashboard', $url . '/investor/referrals')
             . self::signoff();
 
-        return self::send($user['email'], $user['first_name'], "You&rsquo;re now a {$pName} Partner",
+        return self::send($user['email'], $user['first_name'], "You're now a {$pName} Partner",
             self::wrap($content, "You've been upgraded to Partner — {$fmtRate} referral commission."));
     }
 

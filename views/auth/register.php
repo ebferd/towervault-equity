@@ -17,7 +17,7 @@ $refCode = htmlspecialchars($_GET['ref'] ?? '');
 
 <form id="reg-form">
   <input type="hidden" name="_token" value="<?= csrf_token() ?>"/>
-  <?php if ($refCode): ?><input type="hidden" name="referral_code" value="<?= $refCode ?>"/><?php endif; ?>
+  <?php if ($refCode): ?><input type="hidden" name="referral_code" value="<?= htmlspecialchars($refCode, ENT_QUOTES) ?>"/><?php endif; ?>
 
   <div class="frow">
     <div class="field">

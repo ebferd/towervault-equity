@@ -26,8 +26,14 @@ function verify_csrf(string $token): bool {
     return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
 }
 
+/**
+ * Clean untrusted input for STORAGE. Strips HTML tags and trims — but does NOT
+ * HTML-encode. Encoding happens at OUTPUT time (views use htmlspecialchars), so
+ * encoding here too would double-encode and turn "A & B" into "A &amp; B".
+ * strip_tags removes any tags, so stored values can never carry markup.
+ */
 function sanitize(string $value): string {
-    return htmlspecialchars(strip_tags(trim($value)), ENT_QUOTES, 'UTF-8');
+    return trim(strip_tags($value));
 }
 
 function sanitize_email(string $email): string|false {
