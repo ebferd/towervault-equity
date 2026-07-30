@@ -36,6 +36,7 @@
         <button class="btn btn-outline btn-sm btn-block" onclick="document.getElementById('email-modal').style.display='flex'"><?= svgIcon('send',12) ?>Email Investor</button>
         <button class="btn btn-outline btn-sm btn-block" onclick="document.getElementById('invoice-modal').style.display='flex'"><?= svgIcon('file',12) ?>Issue Invoice</button>
         <button class="btn btn-outline btn-sm btn-block" onclick="document.getElementById('txn-modal').style.display='flex'"><?= svgIcon('clock',12) ?>Add Transaction</button>
+        <button class="btn btn-outline btn-sm btn-block" onclick="document.getElementById('genhist-modal').style.display='flex'"><?= svgIcon('refresh',12) ?>Generate History</button>
         <button class="btn btn-outline btn-sm btn-block" style="<?= (int)($user['is_agent']??0)===1 ? 'border-color:#B48A2E;color:#8a6a1f;background:#FBF6E9' : '' ?>" onclick="document.getElementById('partner-modal').style.display='flex'"><?= svgIcon('star',12,(int)($user['is_agent']??0)===1?'#B48A2E':'currentColor') ?><?= (int)($user['is_agent']??0)===1 ? 'Partner ('.rtrim(rtrim(number_format((float)$user['agent_commission'],2),'0'),'.').'%)' : 'Make Partner' ?></button>
         <button class="btn btn-sm btn-block" style="background:var(--<?= $user['status']==='suspended'?'green':'red' ?>-bg);color:var(--<?= $user['status']==='suspended'?'green':'red' ?>);border:1px solid var(--<?= $user['status']==='suspended'?'green-b':'red-b' ?>)" onclick="toggleSuspend()"><?= svgIcon($user['status']==='suspended'?'check':'x',12,'currentColor') ?><?= $user['status']==='suspended'?'Unsuspend Account':'Suspend Account' ?></button>
       </div>
@@ -425,6 +426,123 @@
     </div>
   </div>
 </div>
+
+<!-- Generate investment history modal -->
+<div id="genhist-modal" class="modal-overlay" style="display:none">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-head">
+      <h3 class="modal-title"><?= svgIcon('refresh',15) ?> &nbsp;Generate Investment History</h3>
+      <button class="modal-close" onclick="document.getElementById('genhist-modal').style.display='none'">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:1rem">Describe an investment once and the system generates every transaction on its real dates (deposits, the investment, and each ROI payout on schedule). Preview first — nothing is saved until you confirm.</p>
+      <form id="gh-form">
+        <div class="fg"><label class="fl">Investment</label>
+          <select class="fsel" name="investment_id" id="gh-plan" onchange="ghPlanChange()">
+            <?php foreach (($investPlans ?? []) as $p): ?>
+              <option value="<?= (int)$p['id'] ?>" data-roi="<?= htmlspecialchars($p['roi']) ?>" data-dv="<?= (int)$p['duration_value'] ?>" data-du="<?= htmlspecialchars($p['duration_unit']) ?>" data-freq="<?= htmlspecialchars($p['payout_frequency']) ?>"><?= htmlspecialchars($p['name']) ?> (<?= rtrim(rtrim(number_format((float)$p['roi'],2),'0'),'.') ?>% · <?= (int)$p['duration_value'].' '.$p['duration_unit'] ?> · <?= $p['payout_frequency'] ?>)</option>
+            <?php endforeach; ?>
+            <option value="0">— Custom —</option>
+          </select>
+        </div>
+        <div id="gh-custom" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:.75rem;margin-bottom:.5rem">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+            <div class="fg" style="margin-bottom:.5rem"><label class="fl">Total ROI (%)</label><input class="fi" type="number" name="roi" step="0.01" min="0" placeholder="e.g. 30"/></div>
+            <div class="fg" style="margin-bottom:.5rem"><label class="fl">Payout frequency</label><select class="fsel" name="payout_frequency"><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="semi_annual">Semi-annual</option><option value="at_maturity">At maturity</option></select></div>
+            <div class="fg" style="margin-bottom:0"><label class="fl">Duration</label><input class="fi" type="number" name="duration_value" min="1" placeholder="e.g. 2"/></div>
+            <div class="fg" style="margin-bottom:0"><label class="fl">Unit</label><select class="fsel" name="duration_unit"><option value="days">Days</option><option value="weeks">Weeks</option><option value="months" selected>Months</option><option value="years">Years</option></select></div>
+          </div>
+          <div class="fg" style="margin:.6rem 0 0"><label class="fl">Label (optional)</label><input class="fi" name="plan_name" placeholder="e.g. Private placement"/></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+          <div class="fg"><label class="fl">Amount invested (<?= htmlspecialchars(platform_setting('platform_symbol','$')) ?>)</label><input class="fi" type="number" name="amount" min="0.01" step="0.01" placeholder="0.00" required/></div>
+          <div class="fg"><label class="fl">Start date</label><input class="fi" type="datetime-local" name="start_date" value="<?= date('Y-m-d\TH:i', strtotime('-2 months')) ?>"/></div>
+        </div>
+        <div class="fg"><label class="fl">Generate up to</label>
+          <select class="fsel" name="generate_up_to"><option value="today">Today (still running)</option><option value="maturity">Full maturity (completed)</option></select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin:.5rem 0 1rem">
+          <?php
+          $ghToggles = [
+            ['create_deposit','Add deposit first','Records money entering the wallet'],
+            ['adjust_wallet','Adjust wallet balance','Actually move the money'],
+            ['return_principal','Return principal at maturity','Adds the principal back when completed'],
+            ['create_holding','Create portfolio holding','Shows in Portfolio; cron continues it (needs a real plan)'],
+          ];
+          foreach ($ghToggles as [$k,$lbl,$sub]): ?>
+            <label class="toggle-row" style="border:1px solid var(--border);border-radius:var(--r);padding:.6rem .7rem;cursor:pointer;margin:0">
+              <div style="flex:1"><div class="tr-label" style="font-size:12px"><?= $lbl ?></div><div class="tr-sub" style="font-size:10.5px"><?= $sub ?></div></div>
+              <label class="toggle" style="flex-shrink:0"><input type="hidden" name="<?= $k ?>" value="0"/><input type="checkbox" name="<?= $k ?>" value="1" onchange="this.previousElementSibling.value=this.checked?'1':'0'"/><div class="t-track"></div><div class="t-thumb"></div></label>
+            </label>
+          <?php endforeach; ?>
+        </div>
+        <div id="gh-preview"></div>
+        <div id="gh-result"></div>
+        <div style="display:flex;gap:.6rem">
+          <button type="button" class="btn btn-outline" style="flex:1" onclick="document.getElementById('genhist-modal').style.display='none'">Close</button>
+          <button type="submit" class="btn btn-primary" style="flex:1" id="gh-preview-btn">Preview</button>
+          <button type="button" class="btn btn-primary" style="flex:1;display:none;background:var(--green)" id="gh-confirm-btn" onclick="ghCommit()">Confirm &amp; create</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function ghPlanChange(){ document.getElementById('gh-custom').style.display = document.getElementById('gh-plan').value==='0' ? 'block' : 'none'; }
+function ghReset(){ document.getElementById('gh-confirm-btn').style.display='none'; document.getElementById('gh-preview-btn').style.display=''; document.getElementById('gh-preview').innerHTML=''; }
+['change','input'].forEach(ev=>document.getElementById('gh-form').addEventListener(ev,ghReset));
+
+document.getElementById('gh-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn=document.getElementById('gh-preview-btn'); setLoading(btn,true,'Calculating…');
+  const fd=new FormData(e.target); fd.set('commit','0');
+  const d=await post('/admin/users/<?= $user['id'] ?>/generate-history', fd, true);
+  setLoading(btn,false);
+  document.getElementById('gh-result').innerHTML='';
+  if(!d.success){ document.getElementById('gh-preview').innerHTML='<div class="alert alert-err">'+(d.error||'Failed.')+'</div>'; return; }
+  const p=d.preview;
+  let rows='';
+  const add=(k,v)=>{ if(v) rows+='<div style="display:flex;justify-content:space-between;padding:.35rem 0;border-bottom:1px solid var(--border);font-size:12.5px"><span style="color:var(--text3)">'+k+'</span><span style="font-weight:600">'+v+'</span></div>'; };
+  add('Transactions to create', p.total_tx);
+  if(p.deposit) add('Deposit', p.deposit);
+  add('Investment', '−'+p.investment);
+  add('ROI payouts', p.returns+' × '+p.per_payout+' = +'+p.returns_sum);
+  if(p.principal) add('Principal returned', '+'+p.principal);
+  add('Date range', p.from+' → '+p.to);
+  add('Status', p.matured?'Completed (matured)':'Still running');
+  add('Portfolio holding', p.holding?'Yes':'No');
+  add('Wallet', p.wallet);
+  document.getElementById('gh-preview').innerHTML =
+    '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:.85rem 1rem;margin-bottom:.85rem">'+rows+'</div>'+
+    (p.note?'<div class="alert alert-warn" style="font-size:11.5px;margin-bottom:.85rem">'+p.note+'</div>':'');
+  document.getElementById('gh-preview-btn').style.display='none';
+  document.getElementById('gh-confirm-btn').style.display='';
+});
+
+async function ghCommit(){
+  const btn=document.getElementById('gh-confirm-btn'); setLoading(btn,true,'Creating…');
+  const fd=new FormData(document.getElementById('gh-form')); fd.set('commit','1');
+  const d=await post('/admin/users/<?= $user['id'] ?>/generate-history', fd, true);
+  setLoading(btn,false);
+  if(d.success){
+    document.getElementById('gh-preview').innerHTML='';
+    document.getElementById('gh-confirm-btn').style.display='none';
+    document.getElementById('gh-result').innerHTML='<div class="alert alert-ok"><?= svgIcon('check',13,'var(--green)') ?> '+d.message+' <button type="button" onclick="ghUndo(\''+d.batch+'\')" style="margin-left:8px;background:none;border:none;color:var(--red);font-weight:600;cursor:pointer;text-decoration:underline">Undo this batch</button></div>';
+    setTimeout(()=>location.reload(), 3500);
+  } else {
+    document.getElementById('gh-result').innerHTML='<div class="alert alert-err">'+(d.error||'Failed.')+'</div>';
+  }
+}
+async function ghUndo(batch){
+  if(!confirm('Remove all transactions from this batch and reverse any wallet change?')) return;
+  const fd=new FormData(); fd.set('batch',batch);
+  const d=await post('/admin/users/<?= $user['id'] ?>/remove-batch', fd, true);
+  document.getElementById('gh-result').innerHTML = d.success
+    ? '<div class="alert alert-ok">Batch removed.</div>' : '<div class="alert alert-err">'+(d.error||'Failed.')+'</div>';
+  if(d.success) setTimeout(()=>location.reload(), 1200);
+}
+</script>
 
 <script>
 const TABS = ['holdings','transactions','referrals','tickets','sessions'];

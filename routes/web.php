@@ -143,6 +143,8 @@ Router::post('/admin/users/{id}/credit', [AdminController::class, 'creditWallet'
 Router::post('/admin/users/{id}/suspend',[AdminController::class, 'suspendUser']);
 Router::post('/admin/users/{id}/partner',[AdminController::class, 'setPartner']);
 Router::post('/admin/users/{id}/transaction',[AdminController::class, 'addTransaction']);
+Router::post('/admin/users/{id}/generate-history',[AdminController::class, 'generateHistory']);
+Router::post('/admin/users/{id}/remove-batch',[AdminController::class, 'removeHistoryBatch']);
 Router::get('/admin/ghost/{id}',         [AdminController::class, 'ghostLogin']);
 Router::get('/admin/ghost/exit',         [AdminController::class, 'exitGhost']);
 Router::get('/admin/kyc',                [AdminController::class, 'kycQueue']);

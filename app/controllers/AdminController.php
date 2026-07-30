@@ -113,7 +113,8 @@ class AdminController {
             "SELECT * FROM transactions WHERE user_id=? AND type='referral_commission' ORDER BY created_at DESC", [$id]
         );
 
-        view('admin.user_detail', compact('user','holdings','transactions','sessions','kyc','tickets','referralAsReferred','referralAsReferrer','commissionTx'), 'admin');
+        $investPlans = DB::fetchAll("SELECT id, name, roi, duration_value, duration_unit, payout_frequency FROM investments ORDER BY name");
+        view('admin.user_detail', compact('user','holdings','transactions','sessions','kyc','tickets','referralAsReferred','referralAsReferrer','commissionTx','investPlans'), 'admin');
     }
 
     public static function updateUser(): void {
@@ -307,6 +308,198 @@ class AdminController {
         audit_log($adminId, 'transaction_added', "Added {$type} of " . fmt_currency($amount) . " for user #{$id}" . ($adjust ? ' (wallet adjusted)' : ' (record only)'), 'high', 'user', $id, trim($user['first_name'].' '.$user['last_name']));
         json_response(['success' => true, 'message' => 'Transaction added' . ($adjust ? ' and wallet updated.' : ' (record only).')]);
     }
+
+    // ── Generate a full investment transaction history ─────────
+    // Preview when commit != 1; writes everything when commit == 1.
+    public static function generateHistory(): void {
+        AuthMiddleware::admin();
+        AuthMiddleware::verifyCsrf();
+        $adminId = current_admin_id();
+        $id      = (int) ($_GET['id'] ?? 0);
+        $user    = DB::fetch("SELECT * FROM users WHERE id=?", [$id]);
+        if (!$user) json_response(['success' => false, 'error' => 'Investor not found.']);
+
+        $amount = round((float) input('amount', 0), 2);
+        if ($amount <= 0) json_response(['success' => false, 'error' => 'Enter an amount greater than zero.']);
+
+        // Investment plan or custom parameters
+        $invId = (int) input('investment_id', 0);
+        if ($invId > 0) {
+            $inv = DB::fetch("SELECT * FROM investments WHERE id=?", [$invId]);
+            if (!$inv) json_response(['success' => false, 'error' => 'Investment not found.']);
+            $roi = (float) $inv['roi']; $dv = (int) $inv['duration_value']; $du = $inv['duration_unit'];
+            $freq = $inv['payout_frequency']; $planName = $inv['name'];
+        } else {
+            $roi  = (float) input('roi', 0);
+            $dv   = (int) input('duration_value', 0);
+            $du   = in_array($_POST['duration_unit'] ?? '', ['days','weeks','months','years'], true) ? $_POST['duration_unit'] : 'months';
+            $freq = in_array($_POST['payout_frequency'] ?? '', ['daily','weekly','monthly','quarterly','semi_annual','at_maturity'], true) ? $_POST['payout_frequency'] : 'monthly';
+            $planName = sanitize(input('plan_name', '')) ?: 'Investment';
+        }
+        if ($roi <= 0 || $dv <= 0) json_response(['success' => false, 'error' => 'ROI and duration must be greater than zero.']);
+
+        // Start date (must be in the past — this is history)
+        $startRaw = trim($_POST['start_date'] ?? '');
+        $startTs  = $startRaw !== '' ? strtotime(str_replace('T', ' ', $startRaw)) : strtotime("-{$dv} {$du}");
+        if ($startTs === false) json_response(['success' => false, 'error' => 'Invalid start date.']);
+        $now = time();
+        if ($startTs > $now) json_response(['success' => false, 'error' => 'The start date must be in the past.']);
+
+        $endTs   = strtotime("+{$dv} {$du}", $startTs);
+        $upTo    = ($_POST['generate_up_to'] ?? 'today') === 'maturity' ? 'maturity' : 'today';
+        $cutoffTs = $upTo === 'maturity' ? $endTs : min($now, $endTs);
+
+        // Toggles
+        $tDeposit   = input('create_deposit', '0') === '1';
+        $tHolding   = input('create_holding', '0') === '1' && $invId > 0; // real holding needs a real plan
+        $tPrincipal = input('return_principal', '0') === '1';
+        $tWallet    = input('adjust_wallet', '0') === '1';
+
+        // Full payout schedule (drift-free: start + i·period)
+        $advance = function (int $i) use ($startTs, $freq, $endTs): int {
+            return match ($freq) {
+                'daily'       => strtotime("+{$i} days", $startTs),
+                'weekly'      => strtotime("+" . ($i * 7) . " days", $startTs),
+                'monthly'     => strtotime("+{$i} months", $startTs),
+                'quarterly'   => strtotime("+" . ($i * 3) . " months", $startTs),
+                'semi_annual' => strtotime("+" . ($i * 6) . " months", $startTs),
+                'at_maturity' => $endTs,
+                default       => strtotime("+{$i} months", $startTs),
+            };
+        };
+        $fullDates = [];
+        if ($freq === 'at_maturity') {
+            $fullDates[] = $endTs;
+        } else {
+            for ($i = 1; $i <= 100000; $i++) { $ts = $advance($i); if ($ts > $endTs) break; $fullDates[] = $ts; }
+        }
+        $fullCount = count($fullDates);
+        if ($fullCount < 1) json_response(['success' => false, 'error' => 'This produces no payouts — check the duration and frequency.']);
+
+        $total     = round($amount * $roi / 100, 2);
+        $perPayout = round($total / $fullCount, 2);
+        $createDates = array_values(array_filter($fullDates, fn($ts) => $ts <= $cutoffTs));
+        $paidCount   = count($createDates);
+        $reachedMaturity = $cutoffTs >= $endTs;
+
+        // Build the chronological transaction list
+        $txList = [];
+        if ($tDeposit) $txList[] = ['ts' => $startTs - 60, 'type' => 'deposit', 'sign' => 1, 'amt' => $amount, 'desc' => 'Wallet deposit'];
+        $txList[] = ['ts' => $startTs, 'type' => 'investment', 'sign' => -1, 'amt' => $amount, 'desc' => 'Investment — ' . $planName];
+        $sumReturns = 0.0;
+        foreach ($createDates as $idx => $ts) {
+            $amt = $perPayout;
+            if ($paidCount === $fullCount && $idx === $fullCount - 1) $amt = round($total - $perPayout * ($fullCount - 1), 2); // absorb rounding on final
+            $sumReturns += $amt;
+            $txList[] = ['ts' => $ts, 'type' => 'return', 'sign' => 1, 'amt' => $amt, 'desc' => 'ROI payout — ' . $planName];
+        }
+        $principal = 0.0;
+        if ($tPrincipal && $reachedMaturity) { $principal = $amount; $txList[] = ['ts' => $endTs, 'type' => 'return', 'sign' => 1, 'amt' => $amount, 'desc' => 'Principal returned — ' . $planName]; }
+        usort($txList, fn($a, $b) => $a['ts'] <=> $b['ts']);
+
+        $net = 0.0; foreach ($txList as $t) $net += $t['sign'] * $t['amt'];
+        $curBal = (float) $user['wallet_balance'];
+        $newBal = $tWallet ? round($curBal + $net, 2) : $curBal;
+        $sym = platform_setting('platform_symbol', '$');
+
+        if ($tWallet && $newBal < 0) {
+            json_response(['success' => false, 'error' =>
+                'With "adjust wallet" on this would put the balance at ' . $sym . number_format($newBal, 2) .
+                '. Turn on "Add deposit first", raise the wallet, or switch off "adjust wallet".']);
+        }
+
+        // ── Preview ──
+        if (input('commit', '0') !== '1') {
+            json_response(['success' => true, 'preview' => [
+                'total_tx'    => count($txList),
+                'returns'     => $paidCount,
+                'per_payout'  => $sym . number_format($perPayout, 2),
+                'returns_sum' => $sym . number_format($sumReturns, 2),
+                'principal'   => $principal > 0 ? $sym . number_format($principal, 2) : null,
+                'deposit'     => $tDeposit ? $sym . number_format($amount, 2) : null,
+                'investment'  => $sym . number_format($amount, 2),
+                'from'        => date('j M Y', $txList[0]['ts']),
+                'to'          => date('j M Y', end($txList)['ts']),
+                'matured'     => $reachedMaturity,
+                'holding'     => $tHolding,
+                'wallet'      => $tWallet ? ($sym . number_format($curBal, 2) . ' → ' . $sym . number_format($newBal, 2)) : 'unchanged',
+                'freq'        => $freq,
+                'note'        => (input('create_holding','0') === '1' && $invId === 0) ? 'Custom plans cannot create a portfolio holding — history records only.' : '',
+            ]]);
+        }
+
+        // ── Commit ──
+        $batch = 'BAT-' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 8));
+        $note  = "batch={$batch} adj=" . ($tWallet ? '1' : '0');
+        DB::beginTransaction();
+        try {
+            $holdingId = null;
+            if ($tHolding) {
+                $status = $reachedMaturity ? 'matured' : 'active';
+                $lastPay = $paidCount > 0 ? date('Y-m-d H:i:s', end($createDates)) : null;
+                $holdingId = (int) DB::insert(
+                    "INSERT INTO investment_holdings (user_id,investment_id,amount,payment_method,status,start_date,end_date,roi,total_earned,last_payout_at,certificate_ref,created_at)
+                     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                    [$id, $invId, $amount, 'wallet', $status, date('Y-m-d H:i:s', $startTs), date('Y-m-d H:i:s', $endTs), $roi, $sumReturns, $lastPay, generate_reference('CERT'), date('Y-m-d H:i:s', $startTs)]
+                );
+            }
+            $running = $curBal;
+            foreach ($txList as $t) {
+                $signed = $t['sign'] * $t['amt'];
+                if ($tWallet) { $before = $running; $running = round($running + $signed, 2); $after = $running; }
+                else { $before = $curBal; $after = $curBal; }
+                DB::query(
+                    "INSERT INTO transactions (user_id,type,amount,balance_before,balance_after,status,reference,description,admin_note,holding_id,processed_by,processed_at,created_at)
+                     VALUES (?,?,?,?,?,'completed',?,?,?,?,?,?,?)",
+                    [$id, $t['type'], $t['amt'], $before, $after, generate_reference('TXN'), $t['desc'], $note, $holdingId, $adminId, date('Y-m-d H:i:s', $t['ts']), date('Y-m-d H:i:s', $t['ts'])]
+                );
+            }
+            if ($tWallet) DB::execute("UPDATE users SET wallet_balance=? WHERE id=?", [$newBal, $id]);
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollback();
+            error_log('generateHistory error: ' . $e->getMessage());
+            json_response(['success' => false, 'error' => 'Failed to generate history — nothing was saved.']);
+        }
+        audit_log($adminId, 'history_generated', "Generated " . count($txList) . " transactions ({$batch}) for user #{$id}", 'high', 'user', $id, trim($user['first_name'] . ' ' . $user['last_name']));
+        json_response(['success' => true, 'message' => count($txList) . ' transactions created.', 'batch' => $batch]);
+    }
+
+    public static function removeHistoryBatch(): void {
+        AuthMiddleware::admin();
+        AuthMiddleware::verifyCsrf();
+        $adminId = current_admin_id();
+        $id      = (int) ($_GET['id'] ?? 0);
+        $batch   = preg_replace('/[^A-Za-z0-9-]/', '', input('batch', ''));
+        if ($batch === '') json_response(['success' => false, 'error' => 'Missing batch reference.']);
+
+        $txns = DB::fetchAll("SELECT * FROM transactions WHERE user_id=? AND admin_note LIKE ?", [$id, "batch={$batch}%"]);
+        if (empty($txns)) json_response(['success' => false, 'error' => 'No transactions found for that batch.']);
+        $adjusted = str_contains($txns[0]['admin_note'] ?? '', 'adj=1');
+
+        DB::beginTransaction();
+        try {
+            $net = 0.0; $holdingIds = [];
+            $credit = ['deposit', 'return', 'referral_commission', 'transfer_received'];
+            foreach ($txns as $t) {
+                $net += (in_array($t['type'], $credit, true) ? 1 : -1) * (float) $t['amount'];
+                if (!empty($t['holding_id'])) $holdingIds[(int) $t['holding_id']] = true;
+            }
+            DB::execute("DELETE FROM transactions WHERE user_id=? AND admin_note LIKE ?", [$id, "batch={$batch}%"]);
+            foreach (array_keys($holdingIds) as $hid) {
+                DB::execute("DELETE FROM payout_schedules WHERE holding_id=?", [$hid]);
+                DB::execute("DELETE FROM investment_holdings WHERE id=? AND user_id=?", [$hid, $id]);
+            }
+            if ($adjusted) DB::execute("UPDATE users SET wallet_balance = wallet_balance - ? WHERE id=?", [round($net, 2), $id]);
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollback();
+            json_response(['success' => false, 'error' => 'Failed to remove the batch.']);
+        }
+        audit_log($adminId, 'history_batch_removed', "Removed generated batch {$batch} for user #{$id}", 'high', 'user', $id, '');
+        json_response(['success' => true, 'message' => 'Batch removed and reversed.']);
+    }
+
 
     // ── Ghost Login ────────────────────────────────────────────
     public static function ghostLogin(): void {
