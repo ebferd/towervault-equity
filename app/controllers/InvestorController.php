@@ -1627,6 +1627,196 @@ HTML;
         return $s . '</svg>';
     }
 
+    // ── Account Statement (PDF) ────────────────────────────────
+    public static function downloadStatement(): void {
+        AuthMiddleware::investor();
+        $uid  = current_user_id();
+        $user = DB::fetch("SELECT * FROM users WHERE id=?", [$uid]);
+        if (!$user) redirect('/investor/transactions');
+
+        // Date range
+        $range = $_GET['range'] ?? '';
+        $toTs  = strtotime(($_GET['to'] ?? date('Y-m-d')) . ' 23:59:59');
+        if ($range === 'all') {
+            $fromTs = strtotime(date('Y-m-d', strtotime($user['created_at'])) . ' 00:00:00');
+        } elseif (!empty($_GET['from'])) {
+            $fromTs = strtotime($_GET['from'] . ' 00:00:00');
+        } else {
+            $fromTs = strtotime('-3 months', $toTs);
+        }
+        if ($fromTs === false || $toTs === false || $fromTs > $toTs) { $toTs = time(); $fromTs = strtotime('-3 months', $toTs); }
+
+        $allTx = DB::fetchAll("SELECT * FROM transactions WHERE user_id=? AND status='completed' ORDER BY created_at ASC, id ASC", [$uid]);
+        $credit = ['deposit', 'return', 'referral_commission', 'transfer_received'];
+        $signOf = function (array $t) use ($credit): int {
+            if ($t['type'] === 'adjustment') return ((float)$t['balance_after'] >= (float)$t['balance_before']) ? 1 : -1;
+            return in_array($t['type'], $credit, true) ? 1 : -1;
+        };
+
+        $running = 0.0; $opening = null; $moneyIn = 0.0; $moneyOut = 0.0; $rows = [];
+        $totDep = 0.0; $totInv = 0.0; $totRet = 0.0;
+        foreach ($allTx as $t) {
+            $amt  = (float) $t['amount'];
+            if ($t['type'] === 'deposit') $totDep += $amt;
+            if ($t['type'] === 'investment') $totInv += $amt;
+            if (in_array($t['type'], ['return', 'referral_commission'], true)) $totRet += $amt;
+
+            $sign = $signOf($t);
+            $txTs = strtotime($t['created_at']);
+            if ($txTs < $fromTs) { $running += $sign * $amt; continue; }
+            if ($txTs > $toTs) break;
+            if ($opening === null) $opening = $running;
+            $running += $sign * $amt;
+            if ($sign > 0) $moneyIn += $amt; else $moneyOut += $amt;
+            $rows[] = ['t' => $t, 'sign' => $sign, 'balance' => $running];
+        }
+        if ($opening === null) $opening = $running;
+        $closing = $running;
+
+        // Company details — all from settings, never hardcoded
+        $brand   = platform_setting('platform_name', 'NexVest');
+        $init     = platform_setting('platform_initials', 'NV');
+        $tagline  = platform_setting('platform_tagline', '');
+        $addr     = platform_setting('platform_address', '');
+        $support  = platform_setting('platform_support_email', platform_setting('platform_email', ''));
+        $website  = preg_replace('#^https?://#', '', rtrim((string) platform_setting('platform_website', ''), '/'));
+        $sym      = platform_setting('platform_symbol', '$');
+
+        $fullName = htmlspecialchars(trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')));
+        $country  = htmlspecialchars($user['country'] ?? '');
+        $acctRef  = 'ACC-' . str_pad((string)$user['id'], 5, '0', STR_PAD_LEFT);
+        $memberSince = date('M Y', strtotime($user['created_at']));
+        $stmtNo   = 'STMT-' . strtoupper(substr(bin2hex(random_bytes(3)), 0, 6));
+        $period   = date('j M Y', $fromTs) . ' – ' . date('j M Y', $toTs);
+        $issued   = date('j F Y');
+
+        $money = fn(float $v) => $sym . number_format($v, 2);
+        $addrLine = $addr !== '' ? htmlspecialchars($addr) : '';
+        if ($support) $addrLine .= ($addrLine ? '<br/>' : '') . htmlspecialchars($support);
+
+        // Transaction rows HTML
+        $trHtml = '';
+        if (empty($rows)) {
+            $trHtml = '<tr><td colspan="6" style="padding:22px;text-align:center;color:#6b7a70;font-size:12px;border-bottom:1px solid #EEF1EC">No transactions in this period.</td></tr>';
+        } else {
+            $i = 0;
+            foreach ($rows as $r) {
+                $t = $r['t']; $bg = ($i % 2 === 1) ? ' background:#FAFBF9;' : '';
+                $dt = strtotime($t['created_at']);
+                $desc = htmlspecialchars($t['description'] ?: ucwords(str_replace('_', ' ', $t['type'])));
+                $ref  = htmlspecialchars($t['reference'] ?? '');
+                $typeLbl = htmlspecialchars(ucwords(str_replace('_', ' ', $t['type'] === 'referral_commission' ? 'commission' : $t['type'])));
+                $in  = $r['sign'] > 0 ? '<span style="color:#1a7a4a">+' . $money((float)$t['amount']) . '</span>' : '<span style="color:#c4cbc2">—</span>';
+                $out = $r['sign'] < 0 ? '<span style="color:#8a5a2b">−' . $money((float)$t['amount']) . '</span>' : '<span style="color:#c4cbc2">—</span>';
+                $trHtml .= '<tr style="' . $bg . '">'
+                    . '<td style="padding:9px 10px;border-bottom:1px solid #EEF1EC;font-weight:bold;white-space:nowrap">' . date('d M Y', $dt) . '<br/><span style="font-weight:normal;color:#6b7a70;font-size:9px">' . date('H:i', $dt) . '</span></td>'
+                    . '<td style="padding:9px 10px;border-bottom:1px solid #EEF1EC">' . $desc . '<br/><span style="color:#8a938a;font-family:DejaVuSansMono,monospace;font-size:8.5px">' . $ref . '</span></td>'
+                    . '<td style="padding:9px 10px;border-bottom:1px solid #EEF1EC;font-size:9px">' . $typeLbl . '</td>'
+                    . '<td style="padding:9px 10px;border-bottom:1px solid #EEF1EC;text-align:right;white-space:nowrap;font-weight:bold">' . $in . '</td>'
+                    . '<td style="padding:9px 10px;border-bottom:1px solid #EEF1EC;text-align:right;white-space:nowrap;font-weight:bold">' . $out . '</td>'
+                    . '<td style="padding:9px 10px;border-bottom:1px solid #EEF1EC;text-align:right;white-space:nowrap;font-weight:bold;color:#0F2A20">' . $money($r['balance']) . '</td>'
+                    . '</tr>';
+                $i++;
+            }
+        }
+
+        $fmtOpen = $money($opening); $fmtIn = $money($moneyIn); $fmtOut = $money($moneyOut); $fmtClose = $money($closing);
+        $fmtDep = $money($totDep); $fmtInv = $money($totInv); $fmtRet = $money($totRet);
+        $txCount = count($rows);
+        $genDate = date('j M Y');
+
+        $html = <<<HTML
+<!DOCTYPE html><html><head><meta charset="UTF-8"/>
+<style>
+  body{font-family:DejaVuSans,sans-serif;color:#0F2A20;font-size:12px}
+  .hd{background:#0F2A20;color:#eef2ee;padding:18px 22px}
+  .brand-name{font-size:16px;font-weight:bold;letter-spacing:2px}
+  .tag{font-size:8px;letter-spacing:2px;color:#b79a56;text-transform:uppercase}
+  .addr{font-size:9px;color:#9fb0a5;line-height:1.5}
+  .doc-title{font-size:10px;letter-spacing:2px;color:#b79a56;text-transform:uppercase;text-align:right}
+  .doc-name{font-size:20px;color:#fff;text-align:right}
+  .doc-meta{font-size:10px;color:#b9c6bd;text-align:right;line-height:1.7}
+  .lbl{font-size:8px;letter-spacing:1.2px;text-transform:uppercase;color:#8f7230;font-weight:bold}
+  .sm-lbl{font-size:8px;letter-spacing:1px;text-transform:uppercase;color:#6b7a70;font-weight:bold}
+  .sm-val{font-size:15px;font-weight:bold}
+  th{background:#F4F6F2;color:#6b7a70;font-size:8px;letter-spacing:.6px;text-transform:uppercase;font-weight:bold;padding:8px 10px;border-top:1px solid #E4E8E0;border-bottom:1px solid #E4E8E0}
+</style></head><body>
+<div class="hd">
+  <table width="100%"><tr>
+    <td valign="top" width="58%">
+      <table><tr>
+        <td valign="top" style="padding-right:10px"><div style="width:40px;height:40px;border:1.5px solid #6b7d72;border-radius:8px;text-align:center;color:#fff;font-weight:bold;font-size:13px;padding-top:11px">{$init}</div></td>
+        <td valign="top"><div class="brand-name">{$brand}</div><div class="tag">{$tagline}</div><div class="addr" style="margin-top:6px">{$addrLine}</div></td>
+      </tr></table>
+    </td>
+    <td valign="top" width="42%">
+      <div class="doc-title">Account Statement</div>
+      <div class="doc-name">Statement</div>
+      <div class="doc-meta"><b style="color:#fff">Period:</b> {$period}<br/><b style="color:#fff">Issued:</b> {$issued}<br/><b style="color:#fff">Statement no.:</b> {$stmtNo}</div>
+    </td>
+  </tr></table>
+</div>
+
+<div style="padding:18px 22px 4px">
+  <table width="100%"><tr>
+    <td valign="top"><div class="lbl">Statement for</div><div style="font-size:16px;font-weight:bold;margin-top:3px">{$fullName}</div><div style="font-size:11px;color:#6b7a70;margin-top:2px">{$country}</div></td>
+    <td valign="top" align="right"><div class="lbl">Account reference</div><div style="font-family:DejaVuSansMono,monospace;font-size:12px;font-weight:bold;margin-top:3px">{$acctRef}</div><div style="font-size:11px;color:#6b7a70;margin-top:2px">Member since {$memberSince}</div></td>
+  </tr></table>
+  <div style="border-bottom:1px solid #E4E8E0;margin-top:12px"></div>
+
+  <table width="100%" cellspacing="0" style="margin-top:16px"><tr>
+    <td width="25%" style="border:1px solid #E4E8E0;padding:11px 13px"><div class="sm-lbl">Opening balance</div><div class="sm-val">{$fmtOpen}</div></td>
+    <td width="25%" style="border:1px solid #E4E8E0;border-left:none;padding:11px 13px"><div class="sm-lbl">Money in</div><div class="sm-val" style="color:#1a7a4a">+{$fmtIn}</div></td>
+    <td width="25%" style="border:1px solid #E4E8E0;border-left:none;padding:11px 13px"><div class="sm-lbl">Money out</div><div class="sm-val" style="color:#8a5a2b">−{$fmtOut}</div></td>
+    <td width="25%" style="background:#0F2A20;padding:11px 13px"><div class="sm-lbl" style="color:#b79a56">Closing balance</div><div class="sm-val" style="color:#fff">{$fmtClose}</div></td>
+  </tr></table>
+  <table width="100%" cellspacing="0" style="margin-top:6px"><tr>
+    <td width="33%" style="border:1px solid #E4E8E0;padding:11px 13px"><div class="sm-lbl">Total deposited (lifetime)</div><div class="sm-val">{$fmtDep}</div></td>
+    <td width="34%" style="border:1px solid #E4E8E0;border-left:none;padding:11px 13px"><div class="sm-lbl">Total invested (lifetime)</div><div class="sm-val">{$fmtInv}</div></td>
+    <td width="33%" style="border:1px solid #E4E8E0;border-left:none;padding:11px 13px"><div class="sm-lbl">Returns earned (lifetime)</div><div class="sm-val" style="color:#1a7a4a">+{$fmtRet}</div></td>
+  </tr></table>
+
+  <div style="margin-top:22px;font-size:13px;font-weight:bold">Transaction history <span style="font-size:10px;color:#6b7a70;font-weight:normal">&nbsp; {$txCount} transactions · {$period}</span></div>
+  <table width="100%" cellspacing="0" style="margin-top:8px">
+    <thead><tr>
+      <th width="15%" style="text-align:left">Date</th>
+      <th width="37%" style="text-align:left">Description</th>
+      <th width="12%" style="text-align:left">Type</th>
+      <th width="12%" style="text-align:right">Money in</th>
+      <th width="12%" style="text-align:right">Money out</th>
+      <th width="12%" style="text-align:right">Balance</th>
+    </tr></thead>
+    <tbody>{$trHtml}</tbody>
+  </table>
+
+  <table width="100%" style="margin-top:18px;border-top:2px solid #0F2A20"><tr>
+    <td valign="top" width="62%" style="padding-top:12px;font-size:9px;color:#6b7a70;line-height:1.6"><b style="color:#0F2A20">This is an official account statement issued by {$brand}.</b> Figures reflect completed transactions for the stated period. Investment values may fluctuate and past returns do not guarantee future performance. If any entry appears incorrect, contact support within 30 days.</td>
+    <td valign="top" align="right" style="padding-top:12px;font-size:9px;color:#6b7a70;line-height:1.7">Generated {$genDate}<br/>Verify at <b style="color:#0F2A20">{$website}</b><br/>Ref <b style="color:#0F2A20">{$stmtNo}</b></td>
+  </tr></table>
+  <div style="text-align:center;margin-top:12px;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#b79a56">{$brand} · Confidential</div>
+</div>
+</body></html>
+HTML;
+
+        $autoload = ROOT . '/vendor/autoload.php';
+        if (file_exists($autoload)) {
+            require_once $autoload;
+            if (class_exists('Mpdf\\Mpdf')) {
+                try {
+                    $tmpDir = ROOT . '/storage/tmp';
+                    if (!is_dir($tmpDir)) @mkdir($tmpDir, 0755, true);
+                    $mpdf = new \Mpdf\Mpdf(['mode' => 'utf-8', 'format' => 'A4', 'margin_top' => 12, 'margin_bottom' => 12, 'margin_left' => 0, 'margin_right' => 0, 'tempDir' => $tmpDir]);
+                    $mpdf->SetTitle("Account Statement — {$stmtNo}");
+                    $mpdf->SetHTMLFooter('<div style="text-align:center;font-size:8px;color:#9aa6a0">Page {PAGENO} of {nbpg}</div>');
+                    $mpdf->WriteHTML($html);
+                    $mpdf->Output("Statement-{$stmtNo}.pdf", 'D');
+                    exit;
+                } catch (\Throwable $e) { error_log('Statement mPDF error: ' . $e->getMessage()); }
+            }
+        }
+        echo $html; exit;
+    }
+
     // ── Calculator ─────────────────────────────────────────────
     public static function calculator(): void {
         AuthMiddleware::investor();

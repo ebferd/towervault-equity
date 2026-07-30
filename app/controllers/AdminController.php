@@ -144,11 +144,19 @@ class AdminController {
         $minOverride      = ($minOverrideRaw !== '' && (float)$minOverrideRaw > 0) ? (float)$minOverrideRaw : null;
         $minNote          = $minOverride !== null ? sanitize($_POST['min_investment_note'] ?? '') : null;
 
+        // Joined date (member since) — admin-editable. Accept datetime-local or date.
+        $joinedRaw = trim($_POST['joined_date'] ?? '');
+        $joinedAt  = $user['created_at'];
+        if ($joinedRaw !== '') {
+            $ts = strtotime(str_replace('T', ' ', $joinedRaw));
+            if ($ts !== false) $joinedAt = date('Y-m-d H:i:s', $ts);
+        }
+
         DB::execute(
             "UPDATE users SET first_name=?, last_name=?, email=?, phone=?, country=?, status=?, kyc_status=?,
-                withdrawals_disabled=?, min_investment_override=?, min_investment_note=?, updated_at=NOW() WHERE id=?",
+                withdrawals_disabled=?, min_investment_override=?, min_investment_note=?, created_at=?, updated_at=NOW() WHERE id=?",
             [$firstName, $lastName, $newEmail, $phone, $country, $status, $kycStatus,
-             $withdrawDisabled, $minOverride, $minNote, $id]
+             $withdrawDisabled, $minOverride, $minNote, $joinedAt, $id]
         );
         audit_log($adminId, 'user_updated', "Updated details for user #{$id}", 'medium', 'user', $id, $user['email'],
             ['status'=>$user['status'],'kyc_status'=>$user['kyc_status'],'email'=>$user['email']],
@@ -250,6 +258,54 @@ class AdminController {
             try { Mailer::sendPartnerUpgrade($user, $rate); } catch (\Throwable $e) { error_log('Partner email error: ' . $e->getMessage()); }
         }
         json_response(['success' => true, 'message' => 'Partner status saved' . ($rateChanged ? ' — notification email sent.' : '.')]);
+    }
+
+    // ── Manually add a transaction record (any date/time) ──────
+    public static function addTransaction(): void {
+        AuthMiddleware::admin();
+        AuthMiddleware::verifyCsrf();
+        $adminId = current_admin_id();
+        $id      = (int) ($_GET['id'] ?? 0);
+        $user    = DB::fetch("SELECT * FROM users WHERE id=?", [$id]);
+        if (!$user) json_response(['success' => false, 'error' => 'Investor not found.']);
+
+        $creditTypes = ['deposit', 'return', 'referral_commission', 'transfer_received'];
+        $debitTypes  = ['withdrawal', 'investment', 'debit', 'transfer_sent'];
+        $type   = sanitize($_POST['type'] ?? '');
+        if (!in_array($type, array_merge($creditTypes, $debitTypes, ['adjustment']), true)) {
+            json_response(['success' => false, 'error' => 'Choose a valid transaction type.']);
+        }
+        $amount = round((float) input('amount', 0), 2);
+        if ($amount <= 0) json_response(['success' => false, 'error' => 'Enter an amount greater than zero.']);
+
+        $status = in_array(($_POST['status'] ?? 'completed'), ['completed','pending','failed','rejected'], true) ? $_POST['status'] : 'completed';
+        $desc   = sanitize($_POST['description'] ?? '') ?: ucwords(str_replace('_', ' ', $type));
+        $adjust = isset($_POST['adjust_balance']) && $_POST['adjust_balance'] === '1';
+
+        // Chosen date/time (backdating allowed); default now
+        $whenRaw = trim($_POST['occurred_at'] ?? '');
+        $when    = 'now';
+        if ($whenRaw !== '') { $ts = strtotime(str_replace('T', ' ', $whenRaw)); if ($ts !== false) $when = date('Y-m-d H:i:s', $ts); }
+        $when    = $when === 'now' ? date('Y-m-d H:i:s') : $when;
+
+        // Direction of the money for this type
+        $isCredit = in_array($type, $creditTypes, true) || ($type === 'adjustment' && $amount > 0);
+        $signed   = $isCredit ? $amount : -$amount;
+
+        $balBefore = (float) $user['wallet_balance'];
+        $balAfter  = $adjust ? round($balBefore + $signed, 2) : $balBefore;
+        if ($adjust && $balAfter < 0) json_response(['success' => false, 'error' => 'This would put the wallet below zero.']);
+
+        $ref = generate_reference('TXN');
+        DB::query(
+            "INSERT INTO transactions (user_id,type,amount,balance_before,balance_after,status,reference,description,admin_note,processed_by,processed_at,created_at)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            [$id, $type, $amount, $balBefore, $balAfter, $status, $ref, $desc, 'Manually added by admin', $adminId, $when, $when]
+        );
+        if ($adjust) DB::execute("UPDATE users SET wallet_balance=? WHERE id=?", [$balAfter, $id]);
+
+        audit_log($adminId, 'transaction_added', "Added {$type} of " . fmt_currency($amount) . " for user #{$id}" . ($adjust ? ' (wallet adjusted)' : ' (record only)'), 'high', 'user', $id, trim($user['first_name'].' '.$user['last_name']));
+        json_response(['success' => true, 'message' => 'Transaction added' . ($adjust ? ' and wallet updated.' : ' (record only).')]);
     }
 
     // ── Ghost Login ────────────────────────────────────────────

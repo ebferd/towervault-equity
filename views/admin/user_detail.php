@@ -35,6 +35,7 @@
         <button class="btn btn-outline btn-sm btn-block" onclick="document.getElementById('debit-modal').style.display='flex'"><?= svgIcon('arrowUp',12) ?>Debit Wallet</button>
         <button class="btn btn-outline btn-sm btn-block" onclick="document.getElementById('email-modal').style.display='flex'"><?= svgIcon('send',12) ?>Email Investor</button>
         <button class="btn btn-outline btn-sm btn-block" onclick="document.getElementById('invoice-modal').style.display='flex'"><?= svgIcon('file',12) ?>Issue Invoice</button>
+        <button class="btn btn-outline btn-sm btn-block" onclick="document.getElementById('txn-modal').style.display='flex'"><?= svgIcon('clock',12) ?>Add Transaction</button>
         <button class="btn btn-outline btn-sm btn-block" style="<?= (int)($user['is_agent']??0)===1 ? 'border-color:#B48A2E;color:#8a6a1f;background:#FBF6E9' : '' ?>" onclick="document.getElementById('partner-modal').style.display='flex'"><?= svgIcon('star',12,(int)($user['is_agent']??0)===1?'#B48A2E':'currentColor') ?><?= (int)($user['is_agent']??0)===1 ? 'Partner ('.rtrim(rtrim(number_format((float)$user['agent_commission'],2),'0'),'.').'%)' : 'Make Partner' ?></button>
         <button class="btn btn-sm btn-block" style="background:var(--<?= $user['status']==='suspended'?'green':'red' ?>-bg);color:var(--<?= $user['status']==='suspended'?'green':'red' ?>);border:1px solid var(--<?= $user['status']==='suspended'?'green-b':'red-b' ?>)" onclick="toggleSuspend()"><?= svgIcon($user['status']==='suspended'?'check':'x',12,'currentColor') ?><?= $user['status']==='suspended'?'Unsuspend Account':'Suspend Account' ?></button>
       </div>
@@ -201,6 +202,10 @@
               <?php endforeach; ?>
             </select>
           </div>
+        </div>
+        <div class="fg">
+          <label class="fl">Joined date <span class="fl-opt">(member since — appears on statements)</span></label>
+          <input class="fi" type="datetime-local" name="joined_date" value="<?= htmlspecialchars(date('Y-m-d\TH:i', strtotime($user['created_at']))) ?>"/>
         </div>
         <div style="margin-top:.4rem;padding-top:.9rem;border-top:1px solid var(--border)">
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:.65rem">Account Restrictions</div>
@@ -370,6 +375,57 @@
   </div>
 </div>
 
+<!-- Add transaction modal -->
+<div id="txn-modal" class="modal-overlay" style="display:none">
+  <div class="modal" style="max-width:470px">
+    <div class="modal-head">
+      <h3 class="modal-title"><?= svgIcon('clock',15) ?> &nbsp;Add Transaction</h3>
+      <button class="modal-close" onclick="document.getElementById('txn-modal').style.display='none'">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="txn-result"></div>
+      <p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:1rem">Add a record to this investor's transaction history. You can set any date &amp; time. By default this is a <strong>record only</strong> and does not change the wallet balance.</p>
+      <form id="txn-form">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+          <div class="fg"><label class="fl">Type</label>
+            <select class="fsel" name="type">
+              <optgroup label="Money in">
+                <option value="deposit">Deposit</option>
+                <option value="return">Return payout</option>
+                <option value="referral_commission">Referral commission</option>
+                <option value="transfer_received">Transfer received</option>
+              </optgroup>
+              <optgroup label="Money out">
+                <option value="withdrawal">Withdrawal</option>
+                <option value="investment">Investment</option>
+                <option value="debit">Debit</option>
+                <option value="transfer_sent">Transfer sent</option>
+              </optgroup>
+              <option value="adjustment">Adjustment</option>
+            </select>
+          </div>
+          <div class="fg"><label class="fl">Amount (<?= htmlspecialchars(platform_setting('platform_symbol','$')) ?>)</label><input class="fi" type="number" name="amount" min="0.01" step="0.01" placeholder="0.00" required/></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+          <div class="fg"><label class="fl">Date &amp; time</label><input class="fi" type="datetime-local" name="occurred_at" value="<?= date('Y-m-d\TH:i') ?>"/></div>
+          <div class="fg"><label class="fl">Status</label>
+            <select class="fsel" name="status"><option value="completed">Completed</option><option value="pending">Pending</option><option value="failed">Failed</option><option value="rejected">Rejected</option></select>
+          </div>
+        </div>
+        <div class="fg"><label class="fl">Description <span class="fl-opt">(optional)</span></label><input class="fi" name="description" placeholder="e.g. Offline bank deposit"/></div>
+        <div class="toggle-row" style="border:1px solid var(--border);border-radius:var(--r);padding:.75rem .9rem;margin:.25rem 0 1rem">
+          <div><div class="tr-label">Also adjust wallet balance</div><div class="tr-sub">On = actually move the money now. Off = history record only.</div></div>
+          <label class="toggle"><input type="hidden" name="adjust_balance" value="0"/><input type="checkbox" name="adjust_balance" value="1" onchange="this.previousElementSibling.value=this.checked?'1':'0'"/><div class="t-track"></div><div class="t-thumb"></div></label>
+        </div>
+        <div style="display:flex;gap:.6rem">
+          <button type="button" class="btn btn-outline" style="flex:1" onclick="document.getElementById('txn-modal').style.display='none'">Cancel</button>
+          <button type="submit" class="btn btn-primary" style="flex:1">Add transaction</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <script>
 const TABS = ['holdings','transactions','referrals','tickets','sessions'];
 function showTab(t) {
@@ -389,6 +445,17 @@ async function walletAction(formId, resultId, modalId) {
 
 document.getElementById('credit-form').addEventListener('submit', e => { e.preventDefault(); walletAction('credit-form','credit-result','credit-modal'); });
 document.getElementById('debit-form').addEventListener('submit',  e => { e.preventDefault(); walletAction('debit-form','debit-result','debit-modal');   });
+
+document.getElementById('txn-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = e.target.querySelector('[type="submit"]'); setLoading(btn, true, 'Adding…');
+  const data = await post('/admin/users/<?= $user['id'] ?>/transaction', new FormData(e.target), true);
+  setLoading(btn, false);
+  document.getElementById('txn-result').innerHTML = data.success
+    ? '<div class="alert alert-ok"><?= svgIcon('check',13,'var(--green)') ?> ' + data.message + '</div>'
+    : '<div class="alert alert-err">' + (data.error||'Failed.') + '</div>';
+  if (data.success) setTimeout(()=>location.reload(), 1400);
+});
 
 document.getElementById('partner-form').addEventListener('submit', async e => {
   e.preventDefault();

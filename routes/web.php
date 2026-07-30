@@ -104,6 +104,7 @@ Router::post('/investor/withdraw',       [InvestorController::class, 'requestWit
 Router::get('/investor/transfer/lookup',[InvestorController::class, 'lookupTransferRecipient']);
 Router::post('/investor/transfer',      [InvestorController::class, 'walletTransfer']);
 Router::get('/investor/transactions',    [InvestorController::class, 'transactions']);
+Router::get('/investor/statement',       [InvestorController::class, 'downloadStatement']);
 Router::get('/investor/notifications',   [InvestorController::class, 'notifications']);
 Router::post('/investor/notifications/read', [InvestorController::class, 'markNotificationsRead']);
 Router::get('/investor/support',         [InvestorController::class, 'support']);
@@ -141,6 +142,7 @@ Router::post('/admin/users/{id}',        [AdminController::class, 'updateUser'])
 Router::post('/admin/users/{id}/credit', [AdminController::class, 'creditWallet']);
 Router::post('/admin/users/{id}/suspend',[AdminController::class, 'suspendUser']);
 Router::post('/admin/users/{id}/partner',[AdminController::class, 'setPartner']);
+Router::post('/admin/users/{id}/transaction',[AdminController::class, 'addTransaction']);
 Router::get('/admin/ghost/{id}',         [AdminController::class, 'ghostLogin']);
 Router::get('/admin/ghost/exit',         [AdminController::class, 'exitGhost']);
 Router::get('/admin/kyc',                [AdminController::class, 'kycQueue']);
