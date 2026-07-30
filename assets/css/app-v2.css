@@ -291,9 +291,12 @@ textarea.fi{height:auto;padding:12px 14px;resize:vertical;min-height:90px}
 .reserved-box{background:var(--em-50);border:1px solid var(--em-100);border-radius:9px;padding:.75rem 1rem;margin-bottom:1rem}
 .reserved-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--em-600);font-weight:600;margin-bottom:2px}
 .reserved-val{font-size:13.5px;font-weight:700;color:var(--em-700)}
-.wire-row{display:flex;justify-content:space-between;align-items:center;padding:.55rem 0;border-bottom:1px solid var(--mist-100);font-size:12.5px}
-.wire-row span:first-child{color:var(--mist-500);font-weight:500}
-.wire-row span:last-child{font-weight:600;font-family:monospace;font-size:11.5px}
+.wire-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:.55rem 0;border-bottom:1px solid var(--mist-100);font-size:12.5px}
+.wire-row span:first-child{color:var(--mist-500);font-weight:500;flex-shrink:0}
+.wire-row .wire-v{font-weight:600;font-family:monospace;font-size:11.5px;display:inline-flex;align-items:center;gap:7px;text-align:right;word-break:break-all;justify-content:flex-end}
+.wire-copy{background:none;border:none;cursor:pointer;color:var(--mist-400);padding:3px;border-radius:5px;display:inline-flex;align-items:center;flex-shrink:0;transition:color .15s,background .15s}
+.wire-copy:hover{color:var(--em-600);background:var(--mist-50)}
+.wire-copy svg{display:block}
 
 .status-badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:4px 11px;border-radius:99px}
 .status-badge.active{background:var(--em-50);color:var(--em-700)}

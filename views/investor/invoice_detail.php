@@ -106,10 +106,13 @@ $paypalReady    = !empty($paypalEmail);
 .pay-detail-lbl{font-size:10px;font-weight:700;color:var(--mist-400);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem}
 .pay-detail-val{font-size:12px;font-weight:600;color:var(--mist-900);word-break:break-all;line-height:1.5}
 .pay-copy-btn{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;color:var(--em-600);background:none;border:none;cursor:pointer;padding:4px 0;margin-top:3px}
-.wire-row{display:flex;justify-content:space-between;font-size:11.5px;padding:.3rem 0;border-bottom:1px solid var(--mist-100)}
+.wire-row{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:11.5px;padding:.3rem 0;border-bottom:1px solid var(--mist-100)}
 .wire-row:last-child{border:none}
-.wire-row span:first-child{color:var(--mist-400)}
-.wire-row span:last-child{font-weight:600;color:var(--mist-900)}
+.wire-row span:first-child{color:var(--mist-400);flex-shrink:0}
+.wire-row .wire-v{font-weight:600;color:var(--mist-900);display:inline-flex;align-items:center;gap:7px;justify-content:flex-end;text-align:right;word-break:break-all}
+.wire-copy{background:none;border:none;cursor:pointer;color:var(--mist-400);padding:3px;border-radius:5px;display:inline-flex;align-items:center;flex-shrink:0}
+.wire-copy:hover{color:var(--em-600);background:var(--mist-50)}
+.wire-copy svg{display:block}
 .pay-timer{display:flex;align-items:center;gap:.5rem;font-size:11.5px;color:var(--mist-500);margin-bottom:.65rem;padding:.5rem .65rem;background:var(--mist-50);border-radius:7px}
 .pay-timer strong{color:var(--mist-900);font-variant-numeric:tabular-nums}
 
@@ -482,7 +485,7 @@ function buildPaymentDetails(data) {
     </div>`;
   } else if (currentMethod === 'wire') {
     const rows = Object.entries({...WIRE, 'Reference': depositRef})
-      .map(([k,v]) => `<div class="wire-row"><span>${k}</span><span>${v||'—'}</span></div>`).join('');
+      .map(([k,v]) => `<div class="wire-row"><span>${k}</span><span class="wire-v">${v||'—'}${v?` <button type="button" class="wire-copy" onclick="copyText('${String(v).replace(/'/g,"\\'")}',this)" title="Copy ${k}" aria-label="Copy ${k}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>`:''}</span></div>`).join('');
     html = `<div class="pay-detail-box">${rows}</div>
     <div class="alert-banner" style="background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;margin-bottom:.65rem">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>

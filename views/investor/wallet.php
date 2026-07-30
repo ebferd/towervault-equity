@@ -480,7 +480,7 @@ async function startDeposit() {
       'SWIFT / BIC' => platform_setting('wire_swift',''),
     ]) ?>;
     details = `<div style="margin-bottom:1rem">
-      ${Object.entries({...wire,'Reference':depRef}).map(([k,v])=>`<div class="wire-row"><span>${k}</span><span>${v||'—'}</span></div>`).join('')}
+      ${Object.entries({...wire,'Reference':depRef}).map(([k,v])=>`<div class="wire-row"><span>${k}</span><span class="wire-v">${v||'—'}${v?` <button type="button" class="wire-copy" data-copy="${v}" title="Copy ${k}" aria-label="Copy ${k}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>`:''}</span></div>`).join('')}
     </div><div class="alert-banner" style="background:var(--amber-50);border:1px solid var(--amber-100);color:var(--amber-700)">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
       <span>Include the reference code in the wire transfer description. Allow 3&ndash;5 business days.</span>
