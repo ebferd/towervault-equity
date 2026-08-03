@@ -718,6 +718,139 @@ HTML;
             self::wrap($content, "You've been upgraded to Partner — {$fmtRate} referral commission."));
     }
 
+    // ═══ Lifecycle / reminder emails ═══════════════════════════
+
+    private static function reminderUrl(): string {
+        return rtrim(platform_setting('platform_website', 'https://nexvest.com'), '/');
+    }
+
+    public static function sendDormantReminder(array $user, float $wallet, int $activeCount, float $totalReturns): bool {
+        $sym = platform_setting('platform_symbol', '$'); $url = self::reminderUrl();
+        $content = self::greeting($user)
+            . self::eyebrow('Your account')
+            . self::heading("It's been a while.")
+            . self::body("You haven't signed in for a while, but your account has been working the whole time. Your active investments are still earning on schedule and your balance is safe. Take a moment to see where things stand.")
+            . self::dataTable([
+                ['Wallet balance', $sym . number_format($wallet, 2)],
+                ['Active investments', (string) $activeCount],
+                ['Returns earned to date', '+' . $sym . number_format($totalReturns, 2)],
+              ])
+            . self::btn('Sign in to your account', $url . '/login')
+            . self::signoff();
+        return self::send($user['email'], $user['first_name'], "It's been a while — your investments are still earning",
+            self::wrap($content, 'Your investments are still earning. Sign back in to check your portfolio.'));
+    }
+
+    public static function sendVerifyReminder(array $user, string $otp): bool {
+        $url = self::reminderUrl();
+        $codeCard = "<table width='100%' cellpadding='0' cellspacing='0' style='margin:20px 0;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px'><tr><td style='padding:20px 24px;text-align:center'>"
+            . "<div style='font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#9CA3AF;margin-bottom:8px'>Your verification code</div>"
+            . "<div style='font-size:28px;font-weight:700;letter-spacing:8px;color:#111827'>{$otp}</div></td></tr></table>";
+        $content = self::greeting($user)
+            . self::eyebrow('Action needed')
+            . self::heading('Confirm your email address')
+            . self::body("Your account is created, but your email isn't verified yet. Verifying secures your account and unlocks deposits, investing, and withdrawals. It only takes a moment.")
+            . $codeCard
+            . self::btn('Verify my email', $url . '/verify-email?email=' . urlencode($user['email']))
+            . self::divider()
+            . "<div style='font-size:12.5px;color:#9CA3AF'>Didn't create this account? You can safely ignore this email.</div>";
+        return self::send($user['email'], $user['first_name'], 'Confirm your email to finish opening your account',
+            self::wrap($content, 'Verify your email to unlock deposits, investing and withdrawals.'));
+    }
+
+    public static function sendFinishSetupReminder(array $user, array $items): bool {
+        $url = self::reminderUrl();
+        $rows = "<table width='100%' cellpadding='0' cellspacing='0' style='margin:18px 0'>";
+        foreach ($items as [$label, $done]) {
+            $ic = $done
+                ? "<td width='28' valign='middle'><div style='width:20px;height:20px;border-radius:50%;background:#DCFCE7;color:#0f7a4a;font-size:11px;font-weight:700;text-align:center;line-height:20px'>&#10003;</div></td>"
+                : "<td width='28' valign='middle'><div style='width:18px;height:18px;border-radius:50%;border:1px dashed #D1D5DB;background:#F3F4F6'></div></td>";
+            $col = $done ? '#9CA3AF' : '#111827';
+            $rows .= "<tr>{$ic}<td valign='middle' style='padding:9px 0 9px 8px;border-bottom:1px solid #F3F4F6;font-size:13.5px;color:{$col}'>{$label}</td></tr>";
+        }
+        $rows .= "</table>";
+        $content = self::greeting($user)
+            . self::eyebrow('Getting started')
+            . self::heading("You're almost there.")
+            . self::body("You're a couple of quick steps away from your first investment. Here's what's left:")
+            . $rows
+            . self::btn('Complete my setup', $url . '/investor/dashboard', '#0f7a4a')
+            . self::signoff();
+        return self::send($user['email'], $user['first_name'], 'Finish setting up your investment account',
+            self::wrap($content, "You're almost ready to make your first investment."));
+    }
+
+    public static function sendAbandonedDepositReminder(array $user, array $invoice): bool {
+        $sym = platform_setting('platform_symbol', '$'); $url = self::reminderUrl();
+        $method = ucfirst((string) ($invoice['method'] ?? 'transfer'));
+        $ref    = htmlspecialchars($invoice['reference'] ?? '');
+        $card = "<table width='100%' cellpadding='0' cellspacing='0' style='margin:20px 0;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px'><tr><td style='padding:18px 22px'>"
+            . "<div style='font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#9CA3AF;margin-bottom:4px'>Amount &middot; {$method}</div>"
+            . "<div style='font-size:24px;font-weight:700;color:#111827'>" . $sym . number_format((float) $invoice['amount'], 2) . "</div>"
+            . "<div style='font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#9CA3AF;margin:10px 0 2px'>Reference</div>"
+            . "<div style='font-family:monospace;font-size:13px;font-weight:700;color:#111827'>{$ref}</div></td></tr></table>";
+        $content = self::greeting($user)
+            . self::eyebrow('Pending deposit')
+            . self::heading('Your deposit is waiting')
+            . self::body("You started a deposit but didn't finish. The details are still ready — complete it to add the funds to your wallet and start investing.")
+            . $card
+            . self::btn('Complete my deposit', $url . '/investor/wallet', '#B45309')
+            . "<table width='100%' cellpadding='0' cellspacing='0' style='margin:16px 0 0;background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px'><tr><td style='padding:12px 14px;font-size:12.5px;color:#92400E;line-height:1.6'>If you've already sent this transfer, no action is needed — it'll be credited once confirmed.</td></tr></table>";
+        return self::send($user['email'], $user['first_name'], 'Your deposit is waiting to be completed',
+            self::wrap($content, 'Complete your pending deposit to add funds to your wallet.'));
+    }
+
+    public static function sendKycAttentionReminder(array $user, string $reason): bool {
+        $url = self::reminderUrl();
+        $reasonBox = $reason !== ''
+            ? "<table width='100%' cellpadding='0' cellspacing='0' style='margin:16px 0;background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px'><tr><td style='padding:12px 14px;font-size:12.5px;color:#92400E;line-height:1.6'><b>Reason:</b> " . htmlspecialchars($reason) . "</td></tr></table>"
+            : '';
+        $content = self::greeting($user)
+            . self::eyebrow('Identity verification')
+            . self::heading('Your verification needs attention')
+            . self::body("We couldn't verify your identity from your last submission, so some features are on hold. Re-submitting takes a couple of minutes and keeps investing and withdrawals open on your account.")
+            . $reasonBox
+            . self::btn('Update my verification', $url . '/investor/kyc', '#B45309')
+            . self::signoff();
+        return self::send($user['email'], $user['first_name'], 'Action needed: your identity verification',
+            self::wrap($content, 'Re-submit your identity verification to keep investing and withdrawals open.'));
+    }
+
+    public static function sendMonthlyEarningsSummary(array $user, string $monthName, float $returns, float $invested, int $positions, float $commission, float $wallet): bool {
+        $sym = platform_setting('platform_symbol', '$'); $url = self::reminderUrl();
+        $content = self::greeting($user)
+            . self::eyebrow('Your month in review')
+            . self::heading($monthName . ' at a glance')
+            . self::body('Here is how your money performed last month.')
+            . self::amountCard('+' . $sym . number_format($returns, 2), 'Returns earned in ' . $monthName, date('F Y'))
+            . self::dataTable([
+                ['Total invested', $sym . number_format($invested, 2)],
+                ['Active positions', (string) $positions],
+                ['Referral commission', '+' . $sym . number_format($commission, 2)],
+                ['Wallet balance', $sym . number_format($wallet, 2)],
+              ])
+            . self::btn('View full portfolio', $url . '/investor/portfolio')
+            . self::signoff();
+        return self::send($user['email'], $user['first_name'], "Your {$monthName} earnings summary",
+            self::wrap($content, "You earned {$sym}" . number_format($returns, 2) . " in {$monthName}. Here's your summary."));
+    }
+
+    public static function sendReferralNudge(array $user, float $earned, string $refCode, float $rate): bool {
+        $sym = platform_setting('platform_symbol', '$'); $url = self::reminderUrl();
+        $rateStr = rtrim(rtrim(number_format($rate, 2), '0'), '.') . '%';
+        $link = $url . '/register?ref=' . urlencode($refCode);
+        $linkBox = "<table width='100%' cellpadding='0' cellspacing='0' style='margin:16px 0;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px'><tr><td style='padding:12px 14px;font-family:monospace;font-size:12px;color:#4B5563;word-break:break-all'>" . htmlspecialchars($link) . "</td></tr></table>";
+        $content = self::greeting($user)
+            . self::eyebrow('Referral program')
+            . self::heading("Earn {$rateStr} when a friend invests")
+            . self::body("You've earned <b>" . $sym . number_format($earned, 2) . "</b> from referrals so far. Share your link and earn <b>{$rateStr} commission</b> on the first investment of anyone who joins through it — paid straight to your wallet.")
+            . $linkBox
+            . self::btn('Share your link', $url . '/investor/referrals', '#8f7230')
+            . self::signoff();
+        return self::send($user['email'], $user['first_name'], "Earn {$rateStr} for every friend who invests",
+            self::wrap($content, "Share your referral link and earn {$rateStr} on their first investment."));
+    }
+
     public static function sendAnnouncement(array $user, string $subject, string $message): bool {
         $pName = platform_setting('platform_name', 'NexVest');
         $content = self::greeting($user)

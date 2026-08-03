@@ -377,9 +377,11 @@ session_destroy();
   <a href="/admin/login" class="btn dark">→ Open Admin Panel</a>
   <div class="info" style="text-align:left;margin-top:1.25rem">
     <strong>Admin login:</strong> <?= htmlspecialchars($adminEmail) ?><br><br>
-    <strong>Set up cron job</strong> for automatic daily ROI payouts.<br>
-    In cPanel → Cron Jobs → add:<br>
+    <strong>Set up cron jobs.</strong> In cPanel → Cron Jobs, add both:<br>
+    Daily ROI payouts:<br>
     <code>0 6 * * * php <?= ROOT ?>/cron/payout.php</code>
+    Reminder / lifecycle emails:<br>
+    <code>0 7 * * * php <?= ROOT ?>/cron/reminders.php</code>
     <br><br>
     <strong>Next steps:</strong><br>
     1. Admin → Settings → Upload logo, set address &amp; phone<br>
