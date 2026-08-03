@@ -36,12 +36,12 @@ class InvestorController {
         // Onboarding checklist
         $hasDeposit      = (bool) DB::fetch("SELECT id FROM transactions WHERE user_id=? AND type='deposit' AND status='completed' LIMIT 1", [$uid]);
         $hasInvestment   = (bool) DB::fetch("SELECT id FROM investment_holdings WHERE user_id=? LIMIT 1", [$uid]);
-        $onboarding = [
-            'email_verified'   => !empty($user['email_verified_at']),
-            'kyc_verified'     => $user['kyc_status'] === 'verified',
-            'funded_wallet'    => $hasDeposit,
-            'first_investment' => $hasInvestment,
-        ];
+        $onboarding = ['email_verified' => !empty($user['email_verified_at'])];
+        if (platform_setting('kyc_enabled', '1') === '1') {
+            $onboarding['kyc_verified'] = $user['kyc_status'] === 'verified';
+        }
+        $onboarding['funded_wallet']    = $hasDeposit;
+        $onboarding['first_investment'] = $hasInvestment;
         $onboardingComplete = !in_array(false, $onboarding, true);
 
         $pendingInvoices = DB::fetchAll(

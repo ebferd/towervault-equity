@@ -178,12 +178,12 @@ $txLabels = [
 
 <?php /* Onboarding checklist — hidden once all steps complete */ ?>
 <?php if (!$onboardingComplete):
-  $obSteps = [
-    'email_verified'   => ['Verify email',       '/investor/kyc',         'Confirm your email address'],
-    'kyc_verified'     => ['Complete KYC',        '/investor/kyc',         'Verify your identity'],
-    'funded_wallet'    => ['Fund wallet',          '/investor/wallet',      'Make your first deposit'],
-    'first_investment' => ['Make an investment',   '/investor/investments', 'Start earning returns'],
-  ];
+  $obSteps = ['email_verified' => ['Verify email', '/investor/kyc', 'Confirm your email address']];
+  if (platform_setting('kyc_enabled','1') === '1') {
+    $obSteps['kyc_verified'] = ['Complete KYC', '/investor/kyc', 'Verify your identity'];
+  }
+  $obSteps['funded_wallet']    = ['Fund wallet',        '/investor/wallet',      'Make your first deposit'];
+  $obSteps['first_investment'] = ['Make an investment', '/investor/investments', 'Start earning returns'];
   $obDone  = count(array_filter($onboarding));
   $obTotal = count($obSteps);
   $obPct   = $obTotal ? round($obDone / $obTotal * 100) : 0;
