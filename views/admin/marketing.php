@@ -83,8 +83,14 @@
 
         <div style="height:1px;background:var(--line,#E5E7EB);margin:1.25rem 0"></div>
 
+        <div class="fg">
+          <label class="fl">Batch size <span class="fl-opt">(optional)</span></label>
+          <input class="fi" id="mk-batch" type="number" min="0" step="1" placeholder="e.g. 25 — leave blank for all"/>
+          <p class="fl-opt" style="margin-top:.4rem">Sends only this many per click and loads the rest back here for the next batch. Safer for deliverability on cold lists.</p>
+        </div>
+
         <button type="button" class="btn btn-primary btn-lg" id="mk-send-btn" style="width:100%;justify-content:center"><?= svgIcon('send',14,'#fff') ?>Send campaign</button>
-        <p class="fl-opt" style="margin-top:.6rem;text-align:center">This sends the email to everyone in the recipients box. Always send a test to yourself first.</p>
+        <p class="fl-opt" style="margin-top:.6rem;text-align:center">Each recipient gets a separate email — no one sees anyone else's address. Always send a test to yourself first.</p>
 
         <div class="mk-stat"><span>On the suppression list</span><b><?= (int)$unsubCount ?> unsubscribed</b></div>
       </div>
@@ -187,13 +193,23 @@ $('mk-send-btn').addEventListener('click', async function(){
   if(!validate()) return;
   const n = countRecipients();
   if(n === 0){ $('mk-alert').innerHTML = '<div class="alert alert-err">Add at least one valid recipient email.</div>'; window.scrollTo({top:0,behavior:'smooth'}); return; }
-  if(!confirm('Send this campaign to ' + n + ' recipient(s)? Make sure you have sent yourself a test first.')) return;
+  const batch = parseInt($('mk-batch').value, 10) || 0;
+  const willSend = batch > 0 ? Math.min(batch, n) : n;
+  const extra = (batch > 0 && n > batch) ? ' The remaining ' + (n - batch) + ' will be loaded back for the next batch.' : '';
+  if(!confirm('Send this campaign to ' + willSend + ' recipient(s)?' + extra + ' Make sure you have sent yourself a test first.')) return;
   setLoading(this, true, 'Sending…');
-  const data = await post('/admin/marketing/send', { ...payload(), recipients: $('mk-recipients').value });
+  const data = await post('/admin/marketing/send', { ...payload(), recipients: $('mk-recipients').value, batch_size: batch });
   setLoading(this, false);
   if(data.success){
     $('mk-alert').innerHTML = '<div class="alert alert-ok">' + data.message + '</div>';
-    setTimeout(()=>location.reload(), 1400);
+    if(Array.isArray(data.remaining) && data.remaining.length){
+      // Load the leftover addresses so the next batch is one click away.
+      $('mk-recipients').value = data.remaining.join('\n');
+      countRecipients();
+    } else {
+      $('mk-recipients').value = '';
+      countRecipients();
+    }
   } else {
     $('mk-alert').innerHTML = '<div class="alert alert-err">' + (data.error || 'Send failed.') + '</div>';
   }

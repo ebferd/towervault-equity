@@ -1420,6 +1420,7 @@ class AdminController {
         $headline = sanitize(input('headline', ''));
         $body     = sanitize(input('body', ''));
         $ctaLabel = sanitize(input('cta_label', ''));
+        $batch    = max(0, (int) input('batch_size', 0));   // 0 = send to everyone this run
         $featIds  = self::marketingIds(input('featured_ids', []));
         $invs     = self::marketingInvestments($featIds);
         $emails   = self::parseRecipients((string) input('recipients', ''));
@@ -1431,25 +1432,40 @@ class AdminController {
         // Drop anyone on the suppression list
         $suppressed = array_column(DB::fetchAll("SELECT email FROM marketing_unsubscribes"), 'email');
         $suppressed = array_flip(array_map('strtolower', $suppressed));
-        $targets = array_values(array_filter($emails, fn($e) => !isset($suppressed[$e])));
-        $skipped = count($emails) - count($targets);
+        $eligible = array_values(array_filter($emails, fn($e) => !isset($suppressed[$e])));
+        $skipped  = count($emails) - count($eligible);
 
-        $sent = 0; $failed = 0;
-        foreach ($targets as $e) {
+        // Batch throttle: send at most $batch this run, hand the rest back to the UI.
+        $remaining = [];
+        if ($batch > 0 && count($eligible) > $batch) {
+            $remaining = array_slice($eligible, $batch);
+            $eligible  = array_slice($eligible, 0, $batch);
+        }
+
+        // Sending many messages over SMTP is slow — don't let the request time out,
+        // and keep going even if the browser disconnects. Pace sends to protect
+        // deliverability / stay under provider rate limits.
+        @set_time_limit(0);
+        @ignore_user_abort(true);
+
+        $sent = 0; $failed = 0; $total = count($eligible);
+        foreach ($eligible as $i => $e) {
             if (Mailer::sendMarketing($e, $subject, $body, $headline, $invs, $ctaLabel)) $sent++; else $failed++;
+            if ($i < $total - 1) usleep(400000); // ~0.4s between sends
         }
 
         DB::query(
             "INSERT INTO marketing_campaigns (subject, headline, body, featured_ids, cta_label, recipient_count, sent_count, failed_count, sent_by)
              VALUES (?,?,?,?,?,?,?,?,?)",
-            [$subject, $headline ?: null, $body, ($featIds ? implode(',', $featIds) : null), $ctaLabel ?: null, count($emails), $sent, $failed, $adminId]
+            [$subject, $headline ?: null, $body, ($featIds ? implode(',', $featIds) : null), $ctaLabel ?: null, $total, $sent, $failed, $adminId]
         );
-        audit_log($adminId, 'marketing_sent', "Marketing campaign '{$subject}' sent to {$sent} recipient(s)" . ($skipped ? ", {$skipped} suppressed" : ''), 'medium', 'platform', null, 'Marketing');
+        audit_log($adminId, 'marketing_sent', "Marketing campaign '{$subject}' sent to {$sent} recipient(s)" . ($skipped ? ", {$skipped} suppressed" : '') . (count($remaining) ? ', ' . count($remaining) . ' held for next batch' : ''), 'medium', 'platform', null, 'Marketing');
 
-        $msg = "Campaign sent to {$sent} recipient(s).";
-        if ($failed)  $msg .= " {$failed} failed.";
-        if ($skipped) $msg .= " {$skipped} skipped (unsubscribed).";
-        json_response(['success' => true, 'message' => $msg, 'sent' => $sent, 'failed' => $failed, 'skipped' => $skipped]);
+        $msg = "Sent to {$sent} recipient(s).";
+        if ($failed)          $msg .= " {$failed} failed.";
+        if ($skipped)         $msg .= " {$skipped} skipped (unsubscribed).";
+        if (count($remaining)) $msg .= " " . count($remaining) . " loaded below for the next batch.";
+        json_response(['success' => true, 'message' => $msg, 'sent' => $sent, 'failed' => $failed, 'skipped' => $skipped, 'remaining' => array_values($remaining)]);
     }
 
     // ── Reports ────────────────────────────────────────────────
