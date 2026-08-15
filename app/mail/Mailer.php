@@ -1081,6 +1081,16 @@ HTML;
         return substr(hash_hmac('sha256', strtolower(trim($email)), $secret), 0, 32);
     }
 
+    /** Public marketing site = the apex domain of the configured website (equity.foo.com -> foo.com). */
+    private static function marketingSiteUrl(): string {
+        $url    = platform_setting('platform_website', 'https://nexvest.com');
+        $scheme = parse_url($url, PHP_URL_SCHEME) ?: 'https';
+        $host   = parse_url($url, PHP_URL_HOST) ?: preg_replace('#^https?://#', '', rtrim($url, '/'));
+        $labels = explode('.', $host);
+        if (count($labels) > 2) $host = implode('.', array_slice($labels, -2)); // drop leading subdomain(s)
+        return $scheme . '://' . $host;
+    }
+
     public static function unsubUrl(string $email): string {
         $url = rtrim(platform_setting('platform_website', 'https://nexvest.com'), '/');
         return $url . '/unsubscribe?e=' . urlencode($email) . '&t=' . self::unsubToken($email);
@@ -1140,7 +1150,7 @@ HTML;
 
         return "<table width='100%' cellpadding='0' cellspacing='0' style='border:1px solid #E7E9EE;border-radius:16px;overflow:hidden;margin:14px 0;box-shadow:0 2px 6px rgba(16,24,40,.06)'>
           <!-- HERO: gradient/photo, ROI top-left, type pill top-right, stat strip bottom -->
-          <tr><td style='{$heroBg};padding:16px 18px 15px' height='170' valign='top'>
+          <tr><td bgcolor='{$solid}' style='{$heroBg};padding:16px 18px 15px' height='170' valign='top'>
             <table width='100%' cellpadding='0' cellspacing='0'>
               <tr>
                 <td valign='top'>
@@ -1157,7 +1167,7 @@ HTML;
             </table>
           </td></tr>
           <!-- BODY: name, location, funding, full-width CTA (matches .inv-cta) -->
-          <tr><td class='m-white' style='background:#ffffff;padding:18px 20px 20px'>
+          <tr><td class='m-white' bgcolor='#ffffff' style='background:#ffffff;padding:18px 20px 20px'>
             <div class='m-ink' style='font-size:17px;font-weight:600;color:#111827;letter-spacing:-.2px;line-height:1.3'>{$name}</div>
             " . ($loc ? "<div class='m-sub' style='font-size:12.5px;color:#9AA0AC;margin:4px 0 14px'>{$loc}</div>" : "<div style='height:14px'></div>") . "
             {$fund}
@@ -1180,11 +1190,11 @@ HTML;
         if ($logo !== '') {
             $src = htmlspecialchars(file_url_abs($logo), ENT_QUOTES);
             $alt = htmlspecialchars($pName, ENT_QUOTES);
-            $headerBrand = "<img src='{$src}' alt='{$alt}' height='40' style='display:block;height:40px;width:auto;max-width:220px'/>";
+            $headerBrand = "<img src='{$src}' alt='{$alt}' height='52' style='display:inline-block;height:52px;width:auto;max-width:240px'/>";
         } else {
-            $badge = "<span style='display:inline-block;background:#14161C;border-radius:7px;width:36px;height:36px;text-align:center;line-height:36px;font-size:12px;font-weight:700;color:#ffffff'>" . htmlspecialchars($pInit) . "</span>";
-            $headerBrand = "<table cellpadding='0' cellspacing='0'><tr><td>{$badge}</td>"
-                . "<td class='m-ink' style='padding-left:10px;font-size:15px;font-weight:600;color:#14161C;vertical-align:middle'>{$pName}</td></tr></table>";
+            $badge = "<span style='display:inline-block;background:#14161C;border-radius:8px;width:44px;height:44px;text-align:center;line-height:44px;font-size:14px;font-weight:700;color:#ffffff'>" . htmlspecialchars($pInit) . "</span>";
+            $headerBrand = "<table cellpadding='0' cellspacing='0' align='center'><tr><td>{$badge}</td>"
+                . "<td class='m-ink' style='padding-left:11px;font-size:16px;font-weight:600;color:#14161C;vertical-align:middle'>{$pName}</td></tr></table>";
         }
 
         $pre = $preheader
@@ -1227,18 +1237,18 @@ table{border-spacing:0;border-collapse:collapse}td{padding:0}a{text-decoration:n
 {$pre}
 <table width="100%" cellpadding="0" cellspacing="0" class="m-canvas" style="background:#ffffff">
 <tr><td align="center" class="outer" style="padding:0">
-<table width="640" cellpadding="0" cellspacing="0" class="m-white" style="max-width:640px;width:100%;background:#ffffff">
+<table width="640" cellpadding="0" cellspacing="0" class="m-white" bgcolor="#ffffff" style="max-width:640px;width:100%;background:#ffffff">
 
   <!-- header -->
-  <tr><td class="pad m-white" style="padding:22px 40px;border-bottom:1px solid #EDEFF3;background:#ffffff">
+  <tr><td class="pad m-white" align="center" bgcolor="#ffffff" style="padding:24px 40px;border-bottom:1px solid #EDEFF3;background:#ffffff;text-align:center">
     {$headerBrand}
   </td></tr>
 
   <!-- body -->
-  <tr><td class="pad m-white" style="padding:44px 40px 8px;background:#ffffff">{$content}</td></tr>
+  <tr><td class="pad m-white" bgcolor="#ffffff" style="padding:44px 40px 8px;background:#ffffff">{$content}</td></tr>
 
   <!-- footer -->
-  <tr><td class="pad m-white" style="padding:34px 40px 36px;border-top:1px solid #EDEFF3;background:#ffffff">
+  <tr><td class="pad m-white" bgcolor="#ffffff" style="padding:34px 40px 36px;border-top:1px solid #EDEFF3;background:#ffffff">
     <div style="text-align:center">
       <a href="{$pUrl}" class="m-sub" style="font-size:12.5px;color:#4B5563;margin:0 12px">Website</a>
       <a href="{$pUrl}/investor/how-it-works" class="m-sub" style="font-size:12.5px;color:#4B5563;margin:0 12px">How it works</a>
@@ -1277,7 +1287,7 @@ HTML;
 
         $content = '';
         if (trim($headline) !== '') {
-            $content .= "<div class='m-ink' style='font-size:27px;font-weight:600;color:#14161C;letter-spacing:-.5px;line-height:1.25;margin-bottom:18px'>"
+            $content .= "<div class='m-ink' style='font-size:27px;font-weight:600;color:#14161C;letter-spacing:-.5px;line-height:1.25;margin-bottom:18px;text-align:center'>"
                       . htmlspecialchars($headline) . "</div>";
         }
         $content .= "<div class='m-sub' style='font-size:16px;line-height:1.75;color:#4B5563'>" . nl2br(htmlspecialchars($body)) . "</div>";
@@ -1290,8 +1300,9 @@ HTML;
 
         // Link is always a path we already own — the admin never types a URL.
         $label = trim($ctaLabel) !== '' ? htmlspecialchars($ctaLabel) : 'Visit website';
+        $site  = self::marketingSiteUrl();
         $content .= "<table width='100%' cellpadding='0' cellspacing='0' style='margin:34px 0 6px'><tr><td align='center'>"
-                  . "<a href='{$pUrl}' class='m-btn2' style='display:inline-block;background:#1F3A5F;color:#ffffff;font-size:14.5px;font-weight:600;text-decoration:none;padding:14px 34px;border-radius:8px'>{$label} &rarr;</a>"
+                  . "<a href='{$site}' class='m-btn2' style='display:inline-block;background:#1F3A5F;color:#ffffff;font-size:14.5px;font-weight:600;text-decoration:none;padding:14px 34px;border-radius:8px'>{$label} &rarr;</a>"
                   . "</td></tr></table>";
 
         $pre = trim($headline) !== '' ? $headline : mb_substr(trim($body), 0, 90);
