@@ -1096,15 +1096,16 @@ HTML;
         return $url . '/unsubscribe?e=' . urlencode($email) . '&t=' . self::unsubToken($email);
     }
 
-    /** One featured-opportunity card, styled to match the investor dashboard .inv-card. */
+    /**
+     * One featured-opportunity card. Deliberately LIGHT-themed (no large dark
+     * panel): mail-client dark mode inverts big dark backgrounds badly (it keeps
+     * the dark fill but darkens the white text on it → invisible). A light card
+     * with dark text inverts gracefully and stays readable in every client.
+     */
     private static function featuredCard(array $inv): string {
-        $url    = rtrim(platform_setting('platform_website', 'https://nexvest.com'), '/');
+        $appUrl = rtrim(platform_setting('platform_website', 'https://nexvest.com'), '/');
         $isRE   = ($inv['type'] ?? '') === 'real_estate';
-        // Match .inv-hero gradients (Apple/Gmail honour the gradient; Outlook falls back to the solid).
-        $solid  = $isRE ? '#15294A' : '#0E4032';
-        $grad   = $isRE
-            ? 'linear-gradient(165deg,#0B1120 0%,#172643 55%,#1E3A5F 100%)'
-            : 'linear-gradient(165deg,#0B1120 0%,#0F2E26 55%,#0E4536 100%)';
+        $navy   = '#1E3A5F';
         $typeLbl= $isRE ? 'Real Estate' : 'Index Fund';
         $roi    = htmlspecialchars((string) ($inv['roi'] ?? '0'));
         $min    = fmt_currency((float) ($inv['min_investment'] ?? 0));
@@ -1117,27 +1118,29 @@ HTML;
         $loc    = $isRE
             ? htmlspecialchars(trim(implode(', ', array_filter([$inv['city'] ?? '', $inv['country'] ?? '']))))
             : htmlspecialchars(ucwords(str_replace('_', ' ', (string) ($inv['risk_level'] ?? 'medium'))) . ' risk');
-        $link   = $url . '/investor/investments/' . (int) ($inv['id'] ?? 0);
+        $link   = $appUrl . '/investor/investments/' . (int) ($inv['id'] ?? 0);
 
-        // Hero background: property image behind the dark fade if present, else the gradient (matches dashboard).
-        $heroBg = !empty($inv['image'])
-            ? "background:{$solid};background-image:linear-gradient(to bottom,rgba(7,11,20,.45),rgba(7,11,20,.82)),url('" . htmlspecialchars(file_url_abs((string) $inv['image']), ENT_QUOTES) . "');background-size:cover;background-position:center"
-            : "background:{$solid};background-image:{$grad}";
+        // Optional property photo band on top (images are never recoloured by dark mode).
+        $imgBand = '';
+        if (!empty($inv['image'])) {
+            $src = htmlspecialchars(file_url_abs((string) $inv['image']), ENT_QUOTES);
+            $imgBand = "<tr><td style='padding:0'><img src='{$src}' width='100%' alt='{$name}' style='display:block;width:100%;max-height:150px;object-fit:cover'/></td></tr>";
+        }
 
-        // bottom stat strip (Min / Duration / Payout|Risk) — matches .stat-strip
+        // Min / Duration / Payout|Risk — dark values on white
         $stat = fn(string $l, string $v) =>
-            "<td width='33.33%' valign='bottom' style='padding:0'>
-               <div class='m-onhero' style='font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.65);margin-bottom:2px'>{$l}</div>
-               <div class='m-onhero' style='font-size:14px;font-weight:600;color:#ffffff'>{$v}</div>
+            "<td width='33.33%' valign='top' style='padding:0'>
+               <div class='m-sub' style='font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:#9AA0AC;margin-bottom:3px'>{$l}</div>
+               <div class='m-ink' style='font-size:15px;font-weight:700;color:#14213A'>{$v}</div>
              </td>";
 
-        // funding progress — matches .card-prog (with breathing room before the button)
+        // funding progress
         $fund = '';
         $target = (float) ($inv['funding_target'] ?? 0);
         if ($target > 0) {
             $raised = (float) ($inv['funding_raised'] ?? 0);
             $pct    = min(100, (int) round($raised / $target * 100));
-            $fund = "<table width='100%' cellpadding='0' cellspacing='0' style='margin:0 0 9px'>
+            $fund = "<table width='100%' cellpadding='0' cellspacing='0' style='margin:2px 0 9px'>
                 <tr>
                   <td class='m-sub' style='font-size:11.5px;color:#6B7280'><b class='m-ink' style='color:#1F2937'>{$pct}% Funded</b></td>
                   <td align='right' class='m-sub' style='font-size:11.5px;color:#6B7280'>" . fmt_currency($raised) . " of " . fmt_currency($target) . "</td>
@@ -1148,30 +1151,32 @@ HTML;
               </div>";
         }
 
-        return "<table width='100%' cellpadding='0' cellspacing='0' style='border:1px solid #E7E9EE;border-radius:16px;overflow:hidden;margin:14px 0;box-shadow:0 2px 6px rgba(16,24,40,.06)'>
-          <!-- HERO: gradient/photo, ROI top-left, type pill top-right, stat strip bottom -->
-          <tr><td bgcolor='{$solid}' style='{$heroBg};padding:16px 18px 15px' height='170' valign='top'>
+        return "<table width='100%' cellpadding='0' cellspacing='0' bgcolor='#ffffff' style='background:#ffffff;border:1px solid #E7E9EE;border-radius:16px;overflow:hidden;margin:14px 0;box-shadow:0 2px 6px rgba(16,24,40,.06)'>
+          {$imgBand}
+          <!-- header row: big ROI (navy) + type pill -->
+          <tr><td class='m-white' bgcolor='#ffffff' style='background:#ffffff;padding:18px 20px 0'>
             <table width='100%' cellpadding='0' cellspacing='0'>
               <tr>
                 <td valign='top'>
-                  <div class='m-heroval' style='font-size:30px;font-weight:600;color:#ffffff;letter-spacing:-.5px;line-height:1'>{$roi}%</div>
-                  <div class='m-onhero' style='font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.65);margin-top:3px'>Total ROI</div>
+                  <div class='m-ink' style='font-size:32px;font-weight:700;color:{$navy};letter-spacing:-.5px;line-height:1'>{$roi}%</div>
+                  <div class='m-sub' style='font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:#9AA0AC;margin-top:4px'>Total ROI</div>
                 </td>
                 <td align='right' valign='top'>
-                  <span class='m-onhero' style='display:inline-block;background:rgba(255,255,255,.18);color:#ffffff;font-size:10.5px;font-weight:700;padding:5px 11px;border-radius:99px'>{$typeLbl}</span>
+                  <span class='m-ink' style='display:inline-block;background:#EAF0F7;color:{$navy};font-size:10.5px;font-weight:700;padding:6px 13px;border-radius:99px'>{$typeLbl}</span>
                 </td>
               </tr>
             </table>
-            <table width='100%' cellpadding='0' cellspacing='0' style='margin-top:34px'>
+            <table width='100%' cellpadding='0' cellspacing='0' style='margin-top:18px'>
               <tr>" . $stat('Min.', $min) . $stat('Duration', $dur) . $stat($thirdL, $thirdV) . "</tr>
             </table>
+            <div style='height:1px;background:#EEF0F3;margin:18px 0 0'></div>
           </td></tr>
-          <!-- BODY: name, location, funding, full-width CTA (matches .inv-cta) -->
-          <tr><td class='m-white' bgcolor='#ffffff' style='background:#ffffff;padding:18px 20px 20px'>
+          <!-- body: name, location, funding, CTA -->
+          <tr><td class='m-white' bgcolor='#ffffff' style='background:#ffffff;padding:15px 20px 20px'>
             <div class='m-ink' style='font-size:17px;font-weight:600;color:#111827;letter-spacing:-.2px;line-height:1.3'>{$name}</div>
             " . ($loc ? "<div class='m-sub' style='font-size:12.5px;color:#9AA0AC;margin:4px 0 14px'>{$loc}</div>" : "<div style='height:14px'></div>") . "
             {$fund}
-            <a href='{$link}' class='m-btn' style='display:block;text-align:center;background:#1E3A5F;color:#ffffff;font-size:13.5px;font-weight:600;text-decoration:none;padding:13px 20px;border-radius:9px'>View this opportunity &rarr;</a>
+            <a href='{$link}' class='m-btn' style='display:block;text-align:center;background:{$navy};color:#ffffff;font-size:13.5px;font-weight:600;text-decoration:none;padding:13px 20px;border-radius:9px'>View this opportunity &rarr;</a>
           </td></tr>
         </table>";
     }
