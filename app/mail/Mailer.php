@@ -1117,38 +1117,38 @@ HTML;
         // bottom stat strip (Min / Duration / Payout|Risk) — matches .stat-strip
         $stat = fn(string $l, string $v) =>
             "<td width='33.33%' valign='bottom' style='padding:0'>
-               <div style='font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:2px'>{$l}</div>
-               <div style='font-size:14px;font-weight:600;color:#ffffff'>{$v}</div>
+               <div class='m-onhero' style='font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.65);margin-bottom:2px'>{$l}</div>
+               <div class='m-onhero' style='font-size:14px;font-weight:600;color:#ffffff'>{$v}</div>
              </td>";
 
-        // funding progress — matches .card-prog
+        // funding progress — matches .card-prog (with breathing room before the button)
         $fund = '';
         $target = (float) ($inv['funding_target'] ?? 0);
         if ($target > 0) {
             $raised = (float) ($inv['funding_raised'] ?? 0);
             $pct    = min(100, (int) round($raised / $target * 100));
-            $fund = "<table width='100%' cellpadding='0' cellspacing='0' style='margin:0 0 16px'>
+            $fund = "<table width='100%' cellpadding='0' cellspacing='0' style='margin:0 0 9px'>
                 <tr>
-                  <td style='font-size:11.5px;color:#6B7280'><b style='color:#1F2937'>{$pct}% Funded</b></td>
-                  <td align='right' style='font-size:11.5px;color:#6B7280'>" . fmt_currency($raised) . " of " . fmt_currency($target) . "</td>
+                  <td class='m-sub' style='font-size:11.5px;color:#6B7280'><b class='m-ink' style='color:#1F2937'>{$pct}% Funded</b></td>
+                  <td align='right' class='m-sub' style='font-size:11.5px;color:#6B7280'>" . fmt_currency($raised) . " of " . fmt_currency($target) . "</td>
                 </tr>
               </table>
-              <div style='height:6px;background:#EEF0F3;border-radius:99px;overflow:hidden;margin:-8px 0 16px'>
+              <div style='height:6px;background:#EEF0F3;border-radius:99px;overflow:hidden;margin:0 0 22px'>
                 <div style='height:6px;width:{$pct}%;background:#0E9F6E;border-radius:99px'></div>
               </div>";
         }
 
-        return "<table width='100%' cellpadding='0' cellspacing='0' style='border:1px solid #E7E9EE;border-radius:16px;overflow:hidden;margin:14px 0'>
+        return "<table width='100%' cellpadding='0' cellspacing='0' style='border:1px solid #E7E9EE;border-radius:16px;overflow:hidden;margin:14px 0;box-shadow:0 2px 6px rgba(16,24,40,.06)'>
           <!-- HERO: gradient/photo, ROI top-left, type pill top-right, stat strip bottom -->
           <tr><td style='{$heroBg};padding:16px 18px 15px' height='170' valign='top'>
             <table width='100%' cellpadding='0' cellspacing='0'>
               <tr>
                 <td valign='top'>
-                  <div style='font-size:30px;font-weight:600;color:#ffffff;letter-spacing:-.5px;line-height:1'>{$roi}%</div>
-                  <div style='font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-top:3px'>Total ROI</div>
+                  <div class='m-heroval' style='font-size:30px;font-weight:600;color:#ffffff;letter-spacing:-.5px;line-height:1'>{$roi}%</div>
+                  <div class='m-onhero' style='font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.65);margin-top:3px'>Total ROI</div>
                 </td>
                 <td align='right' valign='top'>
-                  <span style='display:inline-block;background:rgba(255,255,255,.16);color:#ffffff;font-size:10.5px;font-weight:700;padding:5px 11px;border-radius:99px'>{$typeLbl}</span>
+                  <span class='m-onhero' style='display:inline-block;background:rgba(255,255,255,.18);color:#ffffff;font-size:10.5px;font-weight:700;padding:5px 11px;border-radius:99px'>{$typeLbl}</span>
                 </td>
               </tr>
             </table>
@@ -1157,11 +1157,11 @@ HTML;
             </table>
           </td></tr>
           <!-- BODY: name, location, funding, full-width CTA (matches .inv-cta) -->
-          <tr><td style='background:#ffffff;padding:18px 20px 20px'>
-            <div style='font-size:17px;font-weight:600;color:#111827;letter-spacing:-.2px;line-height:1.3'>{$name}</div>
-            " . ($loc ? "<div style='font-size:12.5px;color:#9AA0AC;margin:4px 0 14px'>{$loc}</div>" : "<div style='height:14px'></div>") . "
+          <tr><td class='m-white' style='background:#ffffff;padding:18px 20px 20px'>
+            <div class='m-ink' style='font-size:17px;font-weight:600;color:#111827;letter-spacing:-.2px;line-height:1.3'>{$name}</div>
+            " . ($loc ? "<div class='m-sub' style='font-size:12.5px;color:#9AA0AC;margin:4px 0 14px'>{$loc}</div>" : "<div style='height:14px'></div>") . "
             {$fund}
-            <a href='{$link}' style='display:block;text-align:center;background:#1E3A5F;color:#ffffff;font-size:13.5px;font-weight:600;text-decoration:none;padding:13px 20px;border-radius:9px'>View this opportunity &rarr;</a>
+            <a href='{$link}' class='m-btn' style='display:block;text-align:center;background:#1E3A5F;color:#ffffff;font-size:13.5px;font-weight:600;text-decoration:none;padding:13px 20px;border-radius:9px'>View this opportunity &rarr;</a>
           </td></tr>
         </table>";
     }
@@ -1174,7 +1174,19 @@ HTML;
         $pAddr   = platform_setting('platform_address', '');
         $pEmail  = platform_setting('platform_email',   'noreply@nexvest.com');
         $legalCo = platform_setting('legal_company_name', $pName . ' — ' . platform_setting('platform_tagline','Capital Group'));
-        $brandCell = self::brandCell($pName, $pInit);
+
+        // Header brand: a large uploaded logo stands alone; otherwise fall back to the initials badge + name.
+        $logo = trim((string) platform_setting('platform_logo', ''));
+        if ($logo !== '') {
+            $src = htmlspecialchars(file_url_abs($logo), ENT_QUOTES);
+            $alt = htmlspecialchars($pName, ENT_QUOTES);
+            $headerBrand = "<img src='{$src}' alt='{$alt}' height='40' style='display:block;height:40px;width:auto;max-width:220px'/>";
+        } else {
+            $badge = "<span style='display:inline-block;background:#14161C;border-radius:7px;width:36px;height:36px;text-align:center;line-height:36px;font-size:12px;font-weight:700;color:#ffffff'>" . htmlspecialchars($pInit) . "</span>";
+            $headerBrand = "<table cellpadding='0' cellspacing='0'><tr><td>{$badge}</td>"
+                . "<td class='m-ink' style='padding-left:10px;font-size:15px;font-weight:600;color:#14161C;vertical-align:middle'>{$pName}</td></tr></table>";
+        }
+
         $pre = $preheader
             ? "<div style='display:none;max-height:0;overflow:hidden;font-size:1px;color:#F4F5F7'>{$preheader}&nbsp;&zwnj;</div>"
             : '';
@@ -1184,48 +1196,61 @@ HTML;
 <!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<meta name="color-scheme" content="light"/>
-<meta name="supported-color-schemes" content="light"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="supported-color-schemes" content="light dark"/>
 <title>{$pName}</title>
 <style>
-:root{color-scheme:light;supported-color-schemes:light}
+:root{color-scheme:light dark;supported-color-schemes:light dark}
 body,html{margin:0;padding:0;background:#ffffff;-webkit-font-smoothing:antialiased}
 table{border-spacing:0;border-collapse:collapse}td{padding:0}a{text-decoration:none}img{border:0;display:block}
 @media only screen and (max-width:600px){.pad{padding-left:22px!important;padding-right:22px!important}}
+/* Hold the intended look under forced/auto dark mode (iOS Mail, Gmail, Outlook) */
+@media (prefers-color-scheme: dark){
+  .m-canvas{background:#ffffff!important}
+  .m-white{background:#ffffff!important}
+  .m-ink{color:#111827!important}
+  .m-sub{color:#6B7280!important}
+  .m-mut{color:#8B909C!important}
+  .m-onhero,.m-heroval{color:#ffffff!important}
+  .m-btn{background:#1E3A5F!important;color:#ffffff!important}
+  .m-btn2{background:#1F3A5F!important;color:#ffffff!important}
+}
+[data-ogsc] .m-white{background:#ffffff!important}
+[data-ogsc] .m-ink{color:#111827!important}
+[data-ogsc] .m-sub{color:#6B7280!important}
+[data-ogsc] .m-mut{color:#8B909C!important}
+[data-ogsc] .m-onhero,[data-ogsc] .m-heroval{color:#ffffff!important}
+[data-ogsc] .m-btn{background:#1E3A5F!important;color:#ffffff!important}
+[data-ogsc] .m-btn2{background:#1F3A5F!important;color:#ffffff!important}
 </style></head>
-<body style="margin:0;padding:0;background:#ffffff;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif">
+<body class="m-canvas" style="margin:0;padding:0;background:#ffffff;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif">
 {$pre}
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff">
+<table width="100%" cellpadding="0" cellspacing="0" class="m-canvas" style="background:#ffffff">
 <tr><td align="center" class="outer" style="padding:0">
-<table width="640" cellpadding="0" cellspacing="0" style="max-width:640px;width:100%;background:#ffffff">
+<table width="640" cellpadding="0" cellspacing="0" class="m-white" style="max-width:640px;width:100%;background:#ffffff">
 
   <!-- header -->
-  <tr><td class="pad" style="padding:22px 40px;border-bottom:1px solid #EDEFF3">
-    <table cellpadding="0" cellspacing="0"><tr>
-      {$brandCell}
-      <td style="padding-left:10px;vertical-align:middle">
-        <div style="font-size:14.5px;font-weight:600;color:#14161C;letter-spacing:.2px">{$pName}</div>
-      </td>
-    </tr></table>
+  <tr><td class="pad m-white" style="padding:22px 40px;border-bottom:1px solid #EDEFF3;background:#ffffff">
+    {$headerBrand}
   </td></tr>
 
   <!-- body -->
-  <tr><td class="pad" style="padding:44px 40px 8px">{$content}</td></tr>
+  <tr><td class="pad m-white" style="padding:44px 40px 8px;background:#ffffff">{$content}</td></tr>
 
   <!-- footer -->
-  <tr><td class="pad" style="padding:34px 40px 36px;border-top:1px solid #EDEFF3">
+  <tr><td class="pad m-white" style="padding:34px 40px 36px;border-top:1px solid #EDEFF3;background:#ffffff">
     <div style="text-align:center">
-      <a href="{$pUrl}" style="font-size:12.5px;color:#4B5563;margin:0 12px">Website</a>
-      <a href="{$pUrl}/investor/how-it-works" style="font-size:12.5px;color:#4B5563;margin:0 12px">How it works</a>
-      <a href="{$pUrl}/support" style="font-size:12.5px;color:#4B5563;margin:0 12px">Contact</a>
+      <a href="{$pUrl}" class="m-sub" style="font-size:12.5px;color:#4B5563;margin:0 12px">Website</a>
+      <a href="{$pUrl}/investor/how-it-works" class="m-sub" style="font-size:12.5px;color:#4B5563;margin:0 12px">How it works</a>
+      <a href="{$pUrl}/support" class="m-sub" style="font-size:12.5px;color:#4B5563;margin:0 12px">Contact</a>
     </div>
-    <div style="text-align:center;font-size:11.5px;line-height:1.7;color:#8B909C;margin-top:18px">
-      <b style="color:#4B5563;font-weight:600">{$legalCo}</b><br/>
+    <div class="m-mut" style="text-align:center;font-size:11.5px;line-height:1.7;color:#8B909C;margin-top:18px">
+      <b class="m-sub" style="color:#4B5563;font-weight:600">{$legalCo}</b><br/>
       {$addrLine}
       You received this email because you expressed interest in investment opportunities.<br/>
-      <a href="{$unsubUrl}" style="color:#4B5563;text-decoration:underline">Unsubscribe</a>
+      <a href="{$unsubUrl}" class="m-sub" style="color:#4B5563;text-decoration:underline">Unsubscribe</a>
     </div>
-    <div style="text-align:center;font-size:10.5px;line-height:1.6;color:#AEB2BD;margin-top:14px">
+    <div class="m-mut" style="text-align:center;font-size:10.5px;line-height:1.6;color:#AEB2BD;margin-top:14px">
       Investing carries risk, including loss of capital. Stated returns are targets under each product's terms and are
       not guaranteed. Past performance does not indicate future results. This message is not investment advice or an
       offer where unlawful.
@@ -1252,22 +1277,21 @@ HTML;
 
         $content = '';
         if (trim($headline) !== '') {
-            $content .= "<div style='font-size:27px;font-weight:600;color:#14161C;letter-spacing:-.5px;line-height:1.25;margin-bottom:18px'>"
+            $content .= "<div class='m-ink' style='font-size:27px;font-weight:600;color:#14161C;letter-spacing:-.5px;line-height:1.25;margin-bottom:18px'>"
                       . htmlspecialchars($headline) . "</div>";
         }
-        $content .= "<div style='font-size:16px;line-height:1.75;color:#4B5563'>" . nl2br(htmlspecialchars($body)) . "</div>";
+        $content .= "<div class='m-sub' style='font-size:16px;line-height:1.75;color:#4B5563'>" . nl2br(htmlspecialchars($body)) . "</div>";
 
         if ($invs) {
-            $content .= "<div style='font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#9CA3AF;margin:30px 0 4px'>"
+            $content .= "<div class='m-mut' style='font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#9CA3AF;margin:30px 0 4px'>"
                       . (count($invs) > 1 ? 'Featured opportunities' : 'Featured opportunity') . "</div>";
             foreach ($invs as $inv) $content .= self::featuredCard($inv);
         }
 
         // Link is always a path we already own — the admin never types a URL.
-        $label = trim($ctaLabel) !== '' ? htmlspecialchars($ctaLabel) : 'Browse opportunities';
-        $href  = $pUrl . '/register';
-        $content .= "<table cellpadding='0' cellspacing='0' style='margin:30px 0 4px'><tr><td>"
-                  . "<a href='{$href}' style='display:inline-block;background:#1f3a5f;color:#ffffff;font-size:14.5px;font-weight:600;text-decoration:none;padding:14px 32px;border-radius:8px'>{$label} &rarr;</a>"
+        $label = trim($ctaLabel) !== '' ? htmlspecialchars($ctaLabel) : 'Visit website';
+        $content .= "<table width='100%' cellpadding='0' cellspacing='0' style='margin:34px 0 6px'><tr><td align='center'>"
+                  . "<a href='{$pUrl}' class='m-btn2' style='display:inline-block;background:#1F3A5F;color:#ffffff;font-size:14.5px;font-weight:600;text-decoration:none;padding:14px 34px;border-radius:8px'>{$label} &rarr;</a>"
                   . "</td></tr></table>";
 
         $pre = trim($headline) !== '' ? $headline : mb_substr(trim($body), 0, 90);

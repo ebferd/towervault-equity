@@ -52,8 +52,8 @@
         <?php endif; ?>
         <div class="fg" style="margin-top:1rem;max-width:340px">
           <label class="fl">Button label <span class="fl-opt">(optional)</span></label>
-          <input class="fi" id="mk-cta-label" maxlength="120" placeholder="Browse opportunities"/>
-          <p class="fl-opt" style="margin-top:.4rem">The button always links to your sign-up page — you never need to paste a link.</p>
+          <input class="fi" id="mk-cta-label" maxlength="120" placeholder="Visit website"/>
+          <p class="fl-opt" style="margin-top:.4rem">The button always links to your website — you never need to paste a link.</p>
         </div>
       </div>
     </div>
