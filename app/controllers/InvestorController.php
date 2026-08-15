@@ -1231,6 +1231,29 @@ class InvestorController {
         view('public.legal', ['title' => 'Privacy Policy', 'heading' => 'Privacy Policy', 'content' => $content, 'platform_name' => $name], '');
     }
 
+    // ── Marketing unsubscribe (public, no auth) ────────────────
+    public static function unsubscribe(): void {
+        $email = strtolower(trim((string) ($_GET['e'] ?? '')));
+        $token = (string) ($_GET['t'] ?? '');
+        $name  = platform_setting('platform_name', 'NexVest');
+
+        $valid = $email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)
+              && hash_equals(Mailer::unsubToken($email), $token);
+
+        if ($valid) {
+            DB::query("INSERT IGNORE INTO marketing_unsubscribes (email) VALUES (?)", [$email]);
+            $heading = 'You have been unsubscribed';
+            $content = '<p>' . htmlspecialchars($email) . ' has been removed from our marketing list. '
+                     . 'You will no longer receive promotional emails from ' . htmlspecialchars($name) . '.</p>'
+                     . '<p>Account and transactional notifications are not affected. If this was a mistake, please contact support.</p>';
+        } else {
+            $heading = 'Unsubscribe link invalid';
+            $content = '<p>This unsubscribe link is invalid or has expired. Please use the link from a recent email, '
+                     . 'or contact support to be removed from our list.</p>';
+        }
+        view('public.legal', ['title' => 'Unsubscribe', 'heading' => $heading, 'content' => $content, 'platform_name' => $name], '');
+    }
+
     // ── Profile ────────────────────────────────────────────────
     public static function profile(): void {
         AuthMiddleware::investor();

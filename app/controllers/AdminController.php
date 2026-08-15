@@ -1348,6 +1348,96 @@ class AdminController {
         }
     }
 
+    // ═══ Marketing / cold outreach (to potential clients) ═════
+
+    /** Parse a pasted blob of emails (comma / space / newline / semicolon separated) → unique valid list. */
+    private static function parseRecipients(string $raw): array {
+        $parts = preg_split('/[\s,;]+/', trim($raw)) ?: [];
+        $out = [];
+        foreach ($parts as $p) {
+            $p = strtolower(trim($p));
+            if ($p !== '' && filter_var($p, FILTER_VALIDATE_EMAIL)) $out[$p] = true;
+        }
+        return array_keys($out);
+    }
+
+    private static function marketingInvestment(int $id): ?array {
+        if ($id <= 0) return null;
+        return DB::fetch("SELECT * FROM investments WHERE id=?", [$id]) ?: null;
+    }
+
+    public static function marketing(): void {
+        AuthMiddleware::admin();
+        $investments = DB::fetchAll("SELECT id, name, type, roi, status FROM investments ORDER BY is_featured DESC, id DESC");
+        $recent      = DB::fetchAll("SELECT * FROM marketing_campaigns ORDER BY id DESC LIMIT 8");
+        $unsubCount  = (int) ((DB::fetch("SELECT COUNT(*) c FROM marketing_unsubscribes") ?? [])['c'] ?? 0);
+        $adminEmail  = platform_setting('admin_notification_email', platform_setting('smtp_user', ''));
+        view('admin.marketing', compact('investments','recent','unsubCount','adminEmail'), 'admin');
+    }
+
+    /** Send one preview copy to the admin's own address. */
+    public static function marketingTest(): void {
+        AuthMiddleware::admin();
+        AuthMiddleware::verifyCsrf();
+        $to       = strtolower(trim((string) input('test_email', '')));
+        $subject  = sanitize(input('subject', ''));
+        $headline = sanitize(input('headline', ''));
+        $body     = sanitize(input('body', ''));
+        $ctaLabel = sanitize(input('cta_label', ''));
+        $ctaUrl   = trim((string) input('cta_url', ''));
+        $inv      = self::marketingInvestment((int) input('featured_id', 0));
+
+        if (!$to || !filter_var($to, FILTER_VALIDATE_EMAIL)) json_response(['success' => false, 'error' => 'Enter a valid test email address.']);
+        if (!$subject || !$body) json_response(['success' => false, 'error' => 'Subject and message body are required.']);
+
+        $ok = Mailer::sendMarketing($to, '[TEST] ' . $subject, $body, $headline, $inv, $ctaLabel, $ctaUrl);
+        json_response($ok
+            ? ['success' => true,  'message' => "Test sent to {$to}. Check your inbox."]
+            : ['success' => false, 'error' => 'Failed to send. Check SMTP settings and the server error log.']);
+    }
+
+    /** Send the campaign to the pasted list of potential clients. */
+    public static function marketingSend(): void {
+        AuthMiddleware::admin();
+        AuthMiddleware::verifyCsrf();
+        $adminId  = current_admin_id();
+        $subject  = sanitize(input('subject', ''));
+        $headline = sanitize(input('headline', ''));
+        $body     = sanitize(input('body', ''));
+        $ctaLabel = sanitize(input('cta_label', ''));
+        $ctaUrl   = trim((string) input('cta_url', ''));
+        $featId   = (int) input('featured_id', 0);
+        $inv      = self::marketingInvestment($featId);
+        $emails   = self::parseRecipients((string) input('recipients', ''));
+
+        if (!$subject || !$body) json_response(['success' => false, 'error' => 'Subject and message body are required.']);
+        if (empty($emails))      json_response(['success' => false, 'error' => 'No valid recipient email addresses found.']);
+        if (count($emails) > 500) json_response(['success' => false, 'error' => 'Please send to at most 500 recipients per campaign.']);
+
+        // Drop anyone on the suppression list
+        $suppressed = array_column(DB::fetchAll("SELECT email FROM marketing_unsubscribes"), 'email');
+        $suppressed = array_flip(array_map('strtolower', $suppressed));
+        $targets = array_values(array_filter($emails, fn($e) => !isset($suppressed[$e])));
+        $skipped = count($emails) - count($targets);
+
+        $sent = 0; $failed = 0;
+        foreach ($targets as $e) {
+            if (Mailer::sendMarketing($e, $subject, $body, $headline, $inv, $ctaLabel, $ctaUrl)) $sent++; else $failed++;
+        }
+
+        DB::query(
+            "INSERT INTO marketing_campaigns (subject, headline, body, featured_id, cta_label, cta_url, recipient_count, sent_count, failed_count, sent_by)
+             VALUES (?,?,?,?,?,?,?,?,?,?)",
+            [$subject, $headline ?: null, $body, $featId ?: null, $ctaLabel ?: null, $ctaUrl ?: null, count($emails), $sent, $failed, $adminId]
+        );
+        audit_log($adminId, 'marketing_sent', "Marketing campaign '{$subject}' sent to {$sent} recipient(s)" . ($skipped ? ", {$skipped} suppressed" : ''), 'medium', 'platform', null, 'Marketing');
+
+        $msg = "Campaign sent to {$sent} recipient(s).";
+        if ($failed)  $msg .= " {$failed} failed.";
+        if ($skipped) $msg .= " {$skipped} skipped (unsubscribed).";
+        json_response(['success' => true, 'message' => $msg, 'sent' => $sent, 'failed' => $failed, 'skipped' => $skipped]);
+    }
+
     // ── Reports ────────────────────────────────────────────────
     public static function reports(): void {
         AuthMiddleware::admin();

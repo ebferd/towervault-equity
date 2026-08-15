@@ -86,6 +86,7 @@ Router::post('/logout',                  [AuthController::class, 'logout']);
 // ── Public legal pages (no auth required) ─────────────────────
 Router::get('/terms',                    [InvestorController::class, 'terms']);
 Router::get('/privacy',                  [InvestorController::class, 'privacy']);
+Router::get('/unsubscribe',              [InvestorController::class, 'unsubscribe']);
 
 // ── Investor (Authenticated) ──────────────────────────────────
 Router::get('/investor/dashboard',       [InvestorController::class, 'dashboard']);
@@ -172,6 +173,9 @@ Router::get('/admin/audit',              [AdminController::class, 'auditLog']);
 Router::get('/admin/settings',           [AdminController::class, 'settings']);
 Router::post('/admin/settings',          [AdminController::class, 'saveSettings']);
 Router::post('/admin/announce',          [AdminController::class, 'sendAnnouncement']);
+Router::get('/admin/marketing',          [AdminController::class, 'marketing']);
+Router::post('/admin/marketing/test',    [AdminController::class, 'marketingTest']);
+Router::post('/admin/marketing/send',    [AdminController::class, 'marketingSend']);
 Router::post('/admin/settings/test-smtp',[AdminController::class, 'testSmtp']);
 Router::post('/admin/users/{id}/email',  [AdminController::class, 'emailUser']);
 Router::get('/admin/reports',            [AdminController::class, 'reports']);

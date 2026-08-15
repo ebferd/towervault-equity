@@ -43,6 +43,8 @@ $nav = [
   ['path'=>'/admin/invoices',     'label'=>'Invoices',         'icon'=>'file'],
   ['section'=>'Support'],
   ['path'=>'/admin/tickets',      'label'=>'Support Tickets',  'icon'=>'ticket',   'badge'=>$openTix],
+  ['section'=>'Growth'],
+  ['path'=>'/admin/marketing',    'label'=>'Marketing',        'icon'=>'send'],
   ['section'=>'System'],
   ['path'=>'/admin/reports',      'label'=>'Reports',          'icon'=>'doc'],
   ['path'=>'/admin/audit',        'label'=>'Audit Log',        'icon'=>'log'],
