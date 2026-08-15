@@ -1151,28 +1151,27 @@ HTML;
               </div>";
         }
 
-        return "<table width='100%' cellpadding='0' cellspacing='0' bgcolor='#ffffff' style='background:#ffffff;border:1px solid #E7E9EE;border-radius:16px;overflow:hidden;margin:14px 0;box-shadow:0 2px 6px rgba(16,24,40,.06)'>
+        return "<table width='100%' cellpadding='0' cellspacing='0' bgcolor='#ffffff' style='background:#ffffff;border:1px solid #E1E6EF;border-radius:16px;overflow:hidden;margin:14px 0;box-shadow:0 2px 6px rgba(16,24,40,.06)'>
           {$imgBand}
-          <!-- header row: big ROI (navy) + type pill -->
-          <tr><td class='m-white' bgcolor='#ffffff' style='background:#ffffff;padding:18px 20px 0'>
+          <!-- HERO BAND (light navy tint → survives dark-mode inversion): big ROI + type pill + stat strip -->
+          <tr><td class='m-band' bgcolor='#EEF3FA' style='background:#EEF3FA;border-bottom:1px solid #E1E6EF;padding:18px 20px 17px'>
             <table width='100%' cellpadding='0' cellspacing='0'>
               <tr>
                 <td valign='top'>
-                  <div class='m-ink' style='font-size:32px;font-weight:700;color:{$navy};letter-spacing:-.5px;line-height:1'>{$roi}%</div>
-                  <div class='m-sub' style='font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:#9AA0AC;margin-top:4px'>Total ROI</div>
+                  <div class='m-ink' style='font-size:33px;font-weight:700;color:{$navy};letter-spacing:-.5px;line-height:1'>{$roi}%</div>
+                  <div class='m-sub' style='font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:#8A93A6;margin-top:4px'>Total ROI</div>
                 </td>
                 <td align='right' valign='top'>
-                  <span class='m-ink' style='display:inline-block;background:#EAF0F7;color:{$navy};font-size:10.5px;font-weight:700;padding:6px 13px;border-radius:99px'>{$typeLbl}</span>
+                  <span class='m-white' bgcolor='#ffffff' style='display:inline-block;background:#ffffff;color:{$navy};font-size:10.5px;font-weight:700;padding:6px 13px;border-radius:99px;border:1px solid #DCE3EE'>{$typeLbl}</span>
                 </td>
               </tr>
             </table>
             <table width='100%' cellpadding='0' cellspacing='0' style='margin-top:18px'>
               <tr>" . $stat('Min.', $min) . $stat('Duration', $dur) . $stat($thirdL, $thirdV) . "</tr>
             </table>
-            <div style='height:1px;background:#EEF0F3;margin:18px 0 0'></div>
           </td></tr>
           <!-- body: name, location, funding, CTA -->
-          <tr><td class='m-white' bgcolor='#ffffff' style='background:#ffffff;padding:15px 20px 20px'>
+          <tr><td class='m-white' bgcolor='#ffffff' style='background:#ffffff;padding:16px 20px 20px'>
             <div class='m-ink' style='font-size:17px;font-weight:600;color:#111827;letter-spacing:-.2px;line-height:1.3'>{$name}</div>
             " . ($loc ? "<div class='m-sub' style='font-size:12.5px;color:#9AA0AC;margin:4px 0 14px'>{$loc}</div>" : "<div style='height:14px'></div>") . "
             {$fund}
