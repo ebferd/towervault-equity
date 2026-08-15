@@ -751,7 +751,7 @@ CREATE TABLE IF NOT EXISTS `marketing_campaigns` (
   `subject`            VARCHAR(255) NOT NULL,
   `headline`           VARCHAR(255) DEFAULT NULL,
   `body`               LONGTEXT     NOT NULL,
-  `featured_id`        INT UNSIGNED DEFAULT NULL,
+  `featured_ids`       VARCHAR(255) DEFAULT NULL,
   `cta_label`          VARCHAR(120) DEFAULT NULL,
   `cta_url`            VARCHAR(500) DEFAULT NULL,
   `recipient_count`    INT UNSIGNED NOT NULL DEFAULT 0,

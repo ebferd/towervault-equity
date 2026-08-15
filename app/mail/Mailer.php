@@ -1086,83 +1086,82 @@ HTML;
         return $url . '/unsubscribe?e=' . urlencode($email) . '&t=' . self::unsubToken($email);
     }
 
-    /** Featured-opportunity card, styled to match the dashboard inv-card (email-safe tables). */
+    /** One featured-opportunity card, styled to match the investor dashboard .inv-card. */
     private static function featuredCard(array $inv): string {
         $url    = rtrim(platform_setting('platform_website', 'https://nexvest.com'), '/');
         $isRE   = ($inv['type'] ?? '') === 'real_estate';
-        $heroBg = $isRE ? '#132542' : '#0E3B2E';       // navy for RE, deep green for funds (matches .inv-hero)
+        // Match .inv-hero gradients (Apple/Gmail honour the gradient; Outlook falls back to the solid).
+        $solid  = $isRE ? '#15294A' : '#0E4032';
+        $grad   = $isRE
+            ? 'linear-gradient(165deg,#0B1120 0%,#172643 55%,#1E3A5F 100%)'
+            : 'linear-gradient(165deg,#0B1120 0%,#0F2E26 55%,#0E4536 100%)';
         $typeLbl= $isRE ? 'Real Estate' : 'Index Fund';
         $roi    = htmlspecialchars((string) ($inv['roi'] ?? '0'));
         $min    = fmt_currency((float) ($inv['min_investment'] ?? 0));
         $dur    = (int) ($inv['duration_value'] ?? 0) . ' ' . ucfirst((string) ($inv['duration_unit'] ?? 'months'));
-        $third  = $isRE
+        $thirdV = $isRE
             ? ucwords(str_replace('_', ' ', (string) ($inv['payout_frequency'] ?? 'monthly')))
             : ucwords(str_replace('_', ' ', (string) ($inv['risk_level'] ?? 'medium')));
-        $thirdLbl = $isRE ? 'Payout' : 'Risk';
+        $thirdL = $isRE ? 'Payout' : 'Risk';
         $name   = htmlspecialchars((string) ($inv['name'] ?? ''));
         $loc    = $isRE
             ? htmlspecialchars(trim(implode(', ', array_filter([$inv['city'] ?? '', $inv['country'] ?? '']))))
             : htmlspecialchars(ucwords(str_replace('_', ' ', (string) ($inv['risk_level'] ?? 'medium'))) . ' risk');
         $link   = $url . '/investor/investments/' . (int) ($inv['id'] ?? 0);
 
-        // Optional image band (absolute URL) above the dark hero
-        $imgBand = '';
-        if (!empty($inv['image'])) {
-            $src = htmlspecialchars(file_url_abs((string) $inv['image']), ENT_QUOTES);
-            $imgBand = "<tr><td style='padding:0'><img src='{$src}' width='100%' alt='{$name}' style='display:block;width:100%;max-height:180px;object-fit:cover'/></td></tr>";
-        }
+        // Hero background: property image behind the dark fade if present, else the gradient (matches dashboard).
+        $heroBg = !empty($inv['image'])
+            ? "background:{$solid};background-image:linear-gradient(to bottom,rgba(7,11,20,.45),rgba(7,11,20,.82)),url('" . htmlspecialchars(file_url_abs((string) $inv['image']), ENT_QUOTES) . "');background-size:cover;background-position:center"
+            : "background:{$solid};background-image:{$grad}";
 
-        // Funding progress
+        // bottom stat strip (Min / Duration / Payout|Risk) — matches .stat-strip
+        $stat = fn(string $l, string $v) =>
+            "<td width='33.33%' valign='bottom' style='padding:0'>
+               <div style='font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:2px'>{$l}</div>
+               <div style='font-size:14px;font-weight:600;color:#ffffff'>{$v}</div>
+             </td>";
+
+        // funding progress — matches .card-prog
         $fund = '';
         $target = (float) ($inv['funding_target'] ?? 0);
         if ($target > 0) {
             $raised = (float) ($inv['funding_raised'] ?? 0);
             $pct    = min(100, (int) round($raised / $target * 100));
-            $fund = "<tr><td style='padding:16px 22px 0'>
-                <table width='100%' cellpadding='0' cellspacing='0'><tr>
-                  <td style='font-size:12px;color:#6B7280'><b style='color:#111827'>{$pct}% funded</b></td>
-                  <td align='right' style='font-size:12px;color:#6B7280'>" . fmt_currency($raised) . " of " . fmt_currency($target) . "</td>
-                </tr></table>
-                <div style='height:6px;background:#EAECF1;border-radius:99px;margin-top:8px'>
-                  <div style='height:6px;width:{$pct}%;background:{$heroBg};border-radius:99px'></div>
-                </div>
-              </td></tr>";
+            $fund = "<table width='100%' cellpadding='0' cellspacing='0' style='margin:0 0 16px'>
+                <tr>
+                  <td style='font-size:11.5px;color:#6B7280'><b style='color:#1F2937'>{$pct}% Funded</b></td>
+                  <td align='right' style='font-size:11.5px;color:#6B7280'>" . fmt_currency($raised) . " of " . fmt_currency($target) . "</td>
+                </tr>
+              </table>
+              <div style='height:6px;background:#EEF0F3;border-radius:99px;overflow:hidden;margin:-8px 0 16px'>
+                <div style='height:6px;width:{$pct}%;background:#0E9F6E;border-radius:99px'></div>
+              </div>";
         }
 
-        $statCell = fn(string $l, string $v) =>
-            "<td width='33.33%' style='padding:0 4px;text-align:center'>
-               <div style='font-size:18px;font-weight:600;color:#fff;letter-spacing:-.3px'>{$v}</div>
-               <div style='font-size:9.5px;letter-spacing:.5px;text-transform:uppercase;color:rgba(255,255,255,.55);margin-top:4px'>{$l}</div>
-             </td>";
-
-        return "<div style='font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#9CA3AF;margin:32px 0 12px'>Featured opportunity</div>
-        <table width='100%' cellpadding='0' cellspacing='0' style='border:1px solid #E7E9EE;border-radius:12px;overflow:hidden'>
-          {$imgBand}
-          <!-- dark hero band: ROI + type + stat strip -->
-          <tr><td style='background:{$heroBg};padding:22px 22px 20px'>
+        return "<table width='100%' cellpadding='0' cellspacing='0' style='border:1px solid #E7E9EE;border-radius:16px;overflow:hidden;margin:14px 0'>
+          <!-- HERO: gradient/photo, ROI top-left, type pill top-right, stat strip bottom -->
+          <tr><td style='{$heroBg};padding:16px 18px 15px' height='170' valign='top'>
             <table width='100%' cellpadding='0' cellspacing='0'>
               <tr>
                 <td valign='top'>
-                  <div style='font-size:30px;font-weight:600;color:#fff;letter-spacing:-.5px;line-height:1'>{$roi}%</div>
-                  <div style='font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:rgba(255,255,255,.55);margin-top:4px'>Total ROI</div>
+                  <div style='font-size:30px;font-weight:600;color:#ffffff;letter-spacing:-.5px;line-height:1'>{$roi}%</div>
+                  <div style='font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-top:3px'>Total ROI</div>
                 </td>
                 <td align='right' valign='top'>
-                  <span style='display:inline-block;background:rgba(255,255,255,.14);color:#fff;font-size:10.5px;font-weight:600;padding:5px 12px;border-radius:99px;border:1px solid rgba(255,255,255,.2)'>{$typeLbl}</span>
+                  <span style='display:inline-block;background:rgba(255,255,255,.16);color:#ffffff;font-size:10.5px;font-weight:700;padding:5px 11px;border-radius:99px'>{$typeLbl}</span>
                 </td>
               </tr>
             </table>
-            <table width='100%' cellpadding='0' cellspacing='0' style='margin-top:20px'>
-              <tr>" . $statCell('Min.', $min) . $statCell('Duration', $dur) . $statCell($thirdLbl, $third) . "</tr>
+            <table width='100%' cellpadding='0' cellspacing='0' style='margin-top:34px'>
+              <tr>" . $stat('Min.', $min) . $stat('Duration', $dur) . $stat($thirdL, $thirdV) . "</tr>
             </table>
           </td></tr>
-          <!-- white body: name + location + funding + CTA -->
-          <tr><td style='padding:20px 22px 4px'>
-            <div style='font-size:17px;font-weight:600;color:#111827;letter-spacing:-.2px'>{$name}</div>
-            " . ($loc ? "<div style='font-size:12.5px;color:#9CA3AF;margin-top:3px'>{$loc}</div>" : '') . "
-          </td></tr>
-          {$fund}
-          <tr><td style='padding:16px 22px 22px'>
-            <a href='{$link}' style='display:inline-block;background:{$heroBg};color:#fff;font-size:13px;font-weight:600;text-decoration:none;padding:11px 24px;border-radius:6px'>View this opportunity &rarr;</a>
+          <!-- BODY: name, location, funding, full-width CTA (matches .inv-cta) -->
+          <tr><td style='background:#ffffff;padding:18px 20px 20px'>
+            <div style='font-size:17px;font-weight:600;color:#111827;letter-spacing:-.2px;line-height:1.3'>{$name}</div>
+            " . ($loc ? "<div style='font-size:12.5px;color:#9AA0AC;margin:4px 0 14px'>{$loc}</div>" : "<div style='height:14px'></div>") . "
+            {$fund}
+            <a href='{$link}' style='display:block;text-align:center;background:#1E3A5F;color:#ffffff;font-size:13.5px;font-weight:600;text-decoration:none;padding:13px 20px;border-radius:9px'>View this opportunity &rarr;</a>
           </td></tr>
         </table>";
     }
@@ -1185,17 +1184,20 @@ HTML;
 <!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="color-scheme" content="light"/>
+<meta name="supported-color-schemes" content="light"/>
 <title>{$pName}</title>
 <style>
-body,html{margin:0;padding:0;background:#EDEEF1;-webkit-font-smoothing:antialiased}
+:root{color-scheme:light;supported-color-schemes:light}
+body,html{margin:0;padding:0;background:#ffffff;-webkit-font-smoothing:antialiased}
 table{border-spacing:0;border-collapse:collapse}td{padding:0}a{text-decoration:none}img{border:0;display:block}
-@media only screen and (max-width:600px){.outer{padding:14px 10px 30px!important}.pad{padding-left:24px!important;padding-right:24px!important}}
+@media only screen and (max-width:600px){.pad{padding-left:22px!important;padding-right:22px!important}}
 </style></head>
-<body style="margin:0;padding:0;background:#EDEEF1;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif">
+<body style="margin:0;padding:0;background:#ffffff;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif">
 {$pre}
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#EDEEF1">
-<tr><td align="center" class="outer" style="padding:28px 16px 48px">
-<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border:1px solid #E4E7EE">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff">
+<tr><td align="center" class="outer" style="padding:0">
+<table width="640" cellpadding="0" cellspacing="0" style="max-width:640px;width:100%;background:#ffffff">
 
   <!-- header -->
   <tr><td class="pad" style="padding:22px 40px;border-bottom:1px solid #EDEFF3">
@@ -1238,15 +1240,14 @@ HTML;
 
     /**
      * Send a marketing email to a potential client.
-     * @param string     $email    recipient
-     * @param string     $subject  admin-written subject
-     * @param string     $body     admin-written message (plain text, line breaks preserved)
-     * @param string     $headline optional headline shown above the body
-     * @param array|null $inv      optional investments row for the featured card
-     * @param string     $ctaLabel optional CTA button label
-     * @param string     $ctaUrl   optional CTA button URL
+     * @param string $email    recipient
+     * @param string $subject  admin-written subject
+     * @param string $body     admin-written message (plain text, line breaks preserved)
+     * @param string $headline optional headline shown above the body
+     * @param array  $invs      zero or more investments rows — each renders a dashboard-style card
+     * @param string $ctaLabel optional CTA button label (link is always the known registration path)
      */
-    public static function sendMarketing(string $email, string $subject, string $body, string $headline = '', ?array $inv = null, string $ctaLabel = '', string $ctaUrl = ''): bool {
+    public static function sendMarketing(string $email, string $subject, string $body, string $headline = '', array $invs = [], string $ctaLabel = ''): bool {
         $pUrl = rtrim(platform_setting('platform_website', 'https://nexvest.com'), '/');
 
         $content = '';
@@ -1256,12 +1257,17 @@ HTML;
         }
         $content .= "<div style='font-size:16px;line-height:1.75;color:#4B5563'>" . nl2br(htmlspecialchars($body)) . "</div>";
 
-        if ($inv) $content .= self::featuredCard($inv);
+        if ($invs) {
+            $content .= "<div style='font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#9CA3AF;margin:30px 0 4px'>"
+                      . (count($invs) > 1 ? 'Featured opportunities' : 'Featured opportunity') . "</div>";
+            foreach ($invs as $inv) $content .= self::featuredCard($inv);
+        }
 
-        $label = trim($ctaLabel) !== '' ? htmlspecialchars($ctaLabel) : 'Explore opportunities';
-        $href  = trim($ctaUrl) !== '' ? $ctaUrl : $pUrl . '/register';
-        $content .= "<table cellpadding='0' cellspacing='0' style='margin:32px 0 4px'><tr><td>"
-                  . "<a href='{$href}' style='display:inline-block;background:#1f3a5f;color:#fff;font-size:14.5px;font-weight:600;text-decoration:none;padding:13px 30px;border-radius:6px'>{$label}</a>"
+        // Link is always a path we already own — the admin never types a URL.
+        $label = trim($ctaLabel) !== '' ? htmlspecialchars($ctaLabel) : 'Browse opportunities';
+        $href  = $pUrl . '/register';
+        $content .= "<table cellpadding='0' cellspacing='0' style='margin:30px 0 4px'><tr><td>"
+                  . "<a href='{$href}' style='display:inline-block;background:#1f3a5f;color:#ffffff;font-size:14.5px;font-weight:600;text-decoration:none;padding:14px 32px;border-radius:8px'>{$label} &rarr;</a>"
                   . "</td></tr></table>";
 
         $pre = trim($headline) !== '' ? $headline : mb_substr(trim($body), 0, 90);

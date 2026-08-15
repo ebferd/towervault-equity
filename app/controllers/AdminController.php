@@ -1361,9 +1361,25 @@ class AdminController {
         return array_keys($out);
     }
 
-    private static function marketingInvestment(int $id): ?array {
-        if ($id <= 0) return null;
-        return DB::fetch("SELECT * FROM investments WHERE id=?", [$id]) ?: null;
+    /** Normalise featured_ids input (array or CSV) → clean list of ints, order preserved, de-duped. */
+    private static function marketingIds(mixed $raw): array {
+        if (is_array($raw)) $ids = $raw;
+        else                $ids = preg_split('/[\s,]+/', (string) $raw) ?: [];
+        $out = [];
+        foreach ($ids as $v) { $i = (int) $v; if ($i > 0) $out[$i] = true; }
+        return array_keys($out);
+    }
+
+    /** Load investment rows for the given ids, preserving the given order. */
+    private static function marketingInvestments(array $ids): array {
+        if (empty($ids)) return [];
+        $in   = implode(',', array_fill(0, count($ids), '?'));
+        $rows = DB::fetchAll("SELECT * FROM investments WHERE id IN ($in)", $ids);
+        $byId = [];
+        foreach ($rows as $r) $byId[(int) $r['id']] = $r;
+        $ordered = [];
+        foreach ($ids as $id) if (isset($byId[$id])) $ordered[] = $byId[$id];
+        return $ordered;
     }
 
     public static function marketing(): void {
@@ -1384,13 +1400,12 @@ class AdminController {
         $headline = sanitize(input('headline', ''));
         $body     = sanitize(input('body', ''));
         $ctaLabel = sanitize(input('cta_label', ''));
-        $ctaUrl   = trim((string) input('cta_url', ''));
-        $inv      = self::marketingInvestment((int) input('featured_id', 0));
+        $invs     = self::marketingInvestments(self::marketingIds(input('featured_ids', [])));
 
         if (!$to || !filter_var($to, FILTER_VALIDATE_EMAIL)) json_response(['success' => false, 'error' => 'Enter a valid test email address.']);
         if (!$subject || !$body) json_response(['success' => false, 'error' => 'Subject and message body are required.']);
 
-        $ok = Mailer::sendMarketing($to, '[TEST] ' . $subject, $body, $headline, $inv, $ctaLabel, $ctaUrl);
+        $ok = Mailer::sendMarketing($to, '[TEST] ' . $subject, $body, $headline, $invs, $ctaLabel);
         json_response($ok
             ? ['success' => true,  'message' => "Test sent to {$to}. Check your inbox."]
             : ['success' => false, 'error' => 'Failed to send. Check SMTP settings and the server error log.']);
@@ -1405,9 +1420,8 @@ class AdminController {
         $headline = sanitize(input('headline', ''));
         $body     = sanitize(input('body', ''));
         $ctaLabel = sanitize(input('cta_label', ''));
-        $ctaUrl   = trim((string) input('cta_url', ''));
-        $featId   = (int) input('featured_id', 0);
-        $inv      = self::marketingInvestment($featId);
+        $featIds  = self::marketingIds(input('featured_ids', []));
+        $invs     = self::marketingInvestments($featIds);
         $emails   = self::parseRecipients((string) input('recipients', ''));
 
         if (!$subject || !$body) json_response(['success' => false, 'error' => 'Subject and message body are required.']);
@@ -1422,13 +1436,13 @@ class AdminController {
 
         $sent = 0; $failed = 0;
         foreach ($targets as $e) {
-            if (Mailer::sendMarketing($e, $subject, $body, $headline, $inv, $ctaLabel, $ctaUrl)) $sent++; else $failed++;
+            if (Mailer::sendMarketing($e, $subject, $body, $headline, $invs, $ctaLabel)) $sent++; else $failed++;
         }
 
         DB::query(
-            "INSERT INTO marketing_campaigns (subject, headline, body, featured_id, cta_label, cta_url, recipient_count, sent_count, failed_count, sent_by)
-             VALUES (?,?,?,?,?,?,?,?,?,?)",
-            [$subject, $headline ?: null, $body, $featId ?: null, $ctaLabel ?: null, $ctaUrl ?: null, count($emails), $sent, $failed, $adminId]
+            "INSERT INTO marketing_campaigns (subject, headline, body, featured_ids, cta_label, recipient_count, sent_count, failed_count, sent_by)
+             VALUES (?,?,?,?,?,?,?,?,?)",
+            [$subject, $headline ?: null, $body, ($featIds ? implode(',', $featIds) : null), $ctaLabel ?: null, count($emails), $sent, $failed, $adminId]
         );
         audit_log($adminId, 'marketing_sent', "Marketing campaign '{$subject}' sent to {$sent} recipient(s)" . ($skipped ? ", {$skipped} suppressed" : ''), 'medium', 'platform', null, 'Marketing');
 

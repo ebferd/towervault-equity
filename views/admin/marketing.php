@@ -29,24 +29,31 @@
     </div>
 
     <div class="section" style="margin-top:1.25rem">
-      <div class="section-head"><span class="section-title">Featured opportunity</span><span class="section-meta">Optionally attach a live opportunity card — matches the dashboard exactly</span></div>
+      <div class="section-head"><span class="section-title">Featured opportunities</span><span class="section-meta">Tick any you want to showcase — each renders a live card that matches the dashboard</span></div>
       <div class="section-body">
-        <div class="fg">
-          <label class="fl">Attach opportunity</label>
-          <select class="fi" id="mk-featured">
-            <option value="0">— None —</option>
+        <?php if (empty($investments)): ?>
+          <p class="fl-opt">No opportunities yet. Create one under Investments to feature it here.</p>
+        <?php else: ?>
+          <div class="mk-opps">
             <?php foreach ($investments as $inv): ?>
-              <option value="<?= (int)$inv['id'] ?>">
-                <?= htmlspecialchars($inv['name']) ?> · <?= htmlspecialchars((string)$inv['roi']) ?>% ROI
-                <?= $inv['status'] !== 'active' ? ' (' . htmlspecialchars($inv['status']) . ')' : '' ?>
-              </option>
+              <label class="mk-opp">
+                <input type="checkbox" class="mk-opp-cb" value="<?= (int)$inv['id'] ?>"/>
+                <span class="mk-opp-body">
+                  <span class="mk-opp-name"><?= htmlspecialchars($inv['name']) ?></span>
+                  <span class="mk-opp-meta">
+                    <?= htmlspecialchars((string)$inv['roi']) ?>% ROI ·
+                    <?= $inv['type'] === 'real_estate' ? 'Real Estate' : 'Index Fund' ?><?= $inv['status'] !== 'active' ? ' · ' . htmlspecialchars($inv['status']) : '' ?>
+                  </span>
+                </span>
+              </label>
             <?php endforeach; ?>
-          </select>
-          <p class="fl-opt" style="margin-top:.4rem">The card pulls its ROI, minimum, duration, payout and funding bar straight from the opportunity — always up to date.</p>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
-          <div class="fg"><label class="fl">Button label <span class="fl-opt">(optional)</span></label><input class="fi" id="mk-cta-label" maxlength="120" placeholder="Explore opportunities"/></div>
-          <div class="fg"><label class="fl">Button link <span class="fl-opt">(optional)</span></label><input class="fi" id="mk-cta-url" maxlength="500" placeholder="Defaults to your registration page"/></div>
+          </div>
+          <p class="fl-opt" style="margin-top:.6rem">Each card pulls its ROI, minimum, duration, payout and funding bar straight from the opportunity — always up to date. Leave all unticked to send with no card.</p>
+        <?php endif; ?>
+        <div class="fg" style="margin-top:1rem;max-width:340px">
+          <label class="fl">Button label <span class="fl-opt">(optional)</span></label>
+          <input class="fi" id="mk-cta-label" maxlength="120" placeholder="Browse opportunities"/>
+          <p class="fl-opt" style="margin-top:.4rem">The button always links to your sign-up page — you never need to paste a link.</p>
         </div>
       </div>
     </div>
@@ -117,7 +124,15 @@
   .tbl th{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#9CA3AF;font-weight:600;padding:12px 16px;border-bottom:1px solid #F0F2F7}
   .tbl td{font-size:13px;color:#374151;padding:13px 16px;border-bottom:1px solid #F5F6F8}
   .tbl tbody tr:last-child td{border-bottom:none}
-  @media(max-width:900px){.mk-grid{grid-template-columns:1fr}.mk-sticky{position:static}}
+  .mk-opps{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+  .mk-opp{display:flex;gap:.65rem;align-items:flex-start;border:1px solid #E5E7EB;border-radius:10px;padding:.7rem .8rem;cursor:pointer;transition:border-color .15s,background .15s}
+  .mk-opp:hover{border-color:#C7CDD6}
+  .mk-opp input{margin-top:2px;accent-color:#1E3A5F;width:16px;height:16px;flex-shrink:0;cursor:pointer}
+  .mk-opp:has(input:checked){border-color:#1E3A5F;background:#F5F8FC}
+  .mk-opp-body{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .mk-opp-name{font-size:13.5px;font-weight:600;color:#111827;line-height:1.3}
+  .mk-opp-meta{font-size:11.5px;color:#9CA3AF}
+  @media(max-width:900px){.mk-grid{grid-template-columns:1fr}.mk-sticky{position:static}.mk-opps{grid-template-columns:1fr}}
 </style>
 
 <script>
@@ -135,13 +150,13 @@ function countRecipients(){
 $('mk-recipients').addEventListener('input', countRecipients);
 
 function payload(){
+  const ids = Array.from(document.querySelectorAll('.mk-opp-cb:checked')).map(c=>c.value);
   return {
     subject:   $('mk-subject').value.trim(),
     headline:  $('mk-headline').value.trim(),
     body:      $('mk-body').value.trim(),
-    featured_id: $('mk-featured').value,
+    featured_ids: ids,
     cta_label: $('mk-cta-label').value.trim(),
-    cta_url:   $('mk-cta-url').value.trim(),
   };
 }
 function validate(){
