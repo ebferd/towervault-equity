@@ -309,6 +309,8 @@
             <option value="crypto">Crypto only</option>
             <option value="paypal">PayPal only</option>
             <option value="wire">Wire transfer only</option>
+            <option value="zelle">Zelle only</option>
+            <option value="cashapp">Cash App only</option>
           </select>
         </div>
         <div class="fg"><label class="fl">Description / reason</label><textarea class="fta" name="description" style="min-height:70px" placeholder="Explain what this invoice is for…"></textarea></div>
