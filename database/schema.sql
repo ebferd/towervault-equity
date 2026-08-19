@@ -649,7 +649,7 @@ CREATE TABLE IF NOT EXISTS `admin_invoices` (
   `description`    TEXT           DEFAULT NULL,
   `amount`         DECIMAL(15,2)  NOT NULL,
   `due_date`       DATE           NOT NULL,
-  `payment_method` ENUM('any','crypto','paypal','wire','zelle','cashapp') NOT NULL DEFAULT 'any',
+  `payment_method` VARCHAR(100) NOT NULL DEFAULT 'any',
   `status`         ENUM('pending','paid','cancelled')   NOT NULL DEFAULT 'pending',
   `deposit_ref`    VARCHAR(20)    DEFAULT NULL,
   `paid_at`        DATETIME       DEFAULT NULL,

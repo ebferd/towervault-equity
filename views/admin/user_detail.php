@@ -303,15 +303,15 @@
           <div class="fg"><label class="fl">Amount (<?= htmlspecialchars(platform_setting('platform_symbol','$')) ?>) <span style="color:var(--red)">*</span></label><input class="fi" type="number" name="amount" min="0.01" step="0.01" required placeholder="0.00"/></div>
           <div class="fg"><label class="fl">Due date <span style="color:var(--red)">*</span></label><input class="fi" type="date" name="due_date" required min="<?= date('Y-m-d', strtotime('+1 day')) ?>"/></div>
         </div>
-        <div class="fg"><label class="fl">Payment method</label>
-          <select class="fi" name="payment_method">
-            <option value="any">Any available method</option>
-            <option value="crypto">Crypto only</option>
-            <option value="paypal">PayPal only</option>
-            <option value="wire">Wire transfer only</option>
-            <option value="zelle">Zelle only</option>
-            <option value="cashapp">Cash App only</option>
-          </select>
+        <div class="fg"><label class="fl">Payment methods <span class="fl-opt">(tick one or more — leave all unticked to allow any)</span></label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem .9rem;margin-top:.35rem">
+            <?php foreach ([['crypto','Cryptocurrency'],['paypal','PayPal'],['wire','Wire transfer'],['zelle','Zelle'],['cashapp','Cash App']] as [$mv,$ml]): ?>
+              <label style="display:flex;align-items:center;gap:.5rem;font-size:13px;cursor:pointer">
+                <input type="checkbox" name="payment_methods[]" value="<?= $mv ?>" style="width:16px;height:16px;accent-color:#C0392B;cursor:pointer"/>
+                <?= $ml ?>
+              </label>
+            <?php endforeach; ?>
+          </div>
         </div>
         <div class="fg"><label class="fl">Description / reason</label><textarea class="fta" name="description" style="min-height:70px" placeholder="Explain what this invoice is for…"></textarea></div>
         <div style="display:flex;gap:.65rem">

@@ -8,12 +8,13 @@ $daysLeft    = (int) ceil((strtotime($invoice['due_date']) - time()) / 86400);
 $overdue     = $isPending && $daysLeft < 0;
 $hasBal      = $walletBal >= (float)$invoice['amount'];
 
-// Build list of methods allowed by the invoice setting
-$invoiceAllowed = $invoice['payment_method'] === 'any'
-    ? ['wallet','crypto','paypal','zelle','cashapp','wire']
-    : ($invoice['payment_method'] === 'crypto'
-        ? ['wallet','crypto']
-        : ['wallet', $invoice['payment_method']]);
+// Build list of methods allowed by the invoice setting (single value, CSV list, or 'any')
+if ($invoice['payment_method'] === 'any') {
+    $invoiceAllowed = ['wallet','crypto','paypal','zelle','cashapp','wire'];
+} else {
+    $picked = array_filter(array_map('trim', explode(',', $invoice['payment_method'])));
+    $invoiceAllowed = array_merge(['wallet'], $picked); // wallet is always offered (gated by its own toggle)
+}
 
 // Intersect with globally enabled payment methods
 $enabledByAdmin = [];

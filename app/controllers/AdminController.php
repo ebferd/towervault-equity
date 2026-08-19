@@ -1534,13 +1534,18 @@ class AdminController {
         $desc   = trim($_POST['description'] ?? '');
         $amount = (float) ($_POST['amount']  ?? 0);
         $due    = sanitize($_POST['due_date'] ?? '');
-        $method = sanitize($_POST['payment_method'] ?? 'any');
 
         if (!$uid || !$title || $amount <= 0 || !$due) {
             json_response(['success' => false, 'error' => 'All fields are required.']);
         }
-        $validMethods = ['any','crypto','paypal','wire','zelle','cashapp'];
-        if (!in_array($method, $validMethods, true)) $method = 'any';
+
+        // Accept multiple methods (checkboxes) or a single legacy value.
+        $valid = ['crypto','paypal','wire','zelle','cashapp'];
+        $picked = $_POST['payment_methods'] ?? $_POST['payment_method'] ?? [];
+        if (!is_array($picked)) $picked = ($picked === 'any' || $picked === '') ? [] : [$picked];
+        $picked = array_values(array_unique(array_intersect(array_map('sanitize', $picked), $valid)));
+        // None chosen, or all chosen → 'any'. Otherwise store the comma-separated list.
+        $method = (empty($picked) || count($picked) === count($valid)) ? 'any' : implode(',', $picked);
 
         $user = DB::fetch("SELECT id, first_name, last_name, email FROM users WHERE id=?", [$uid]);
         if (!$user) json_response(['success' => false, 'error' => 'Investor not found.']);

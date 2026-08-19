@@ -1135,7 +1135,7 @@ class InvestorController {
 
         $invoiceAllowed = $invoice['payment_method'] === 'any'
             ? ['crypto','paypal','wire','zelle','cashapp']
-            : [$invoice['payment_method']];
+            : array_values(array_filter(array_map('trim', explode(',', $invoice['payment_method']))));
         $enabledGlobally = [];
         if (platform_setting('payment_crypto','1') === '1') $enabledGlobally[] = 'crypto';
         if (platform_setting('payment_paypal','1') === '1') $enabledGlobally[] = 'paypal';

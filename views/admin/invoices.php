@@ -44,7 +44,11 @@
           <td><?= htmlspecialchars($inv['title']) ?></td>
           <td style="font-weight:700;color:var(--green)"><?= fmt_currency((float)$inv['amount']) ?></td>
           <td><?= date('d M Y', strtotime($inv['due_date'])) ?></td>
-          <td><?= badge(ucfirst($inv['payment_method'])) ?></td>
+          <td><?php
+            $pmLabels = ['crypto'=>'Crypto','paypal'=>'PayPal','wire'=>'Wire','zelle'=>'Zelle','cashapp'=>'Cash App'];
+            $pm = $inv['payment_method'];
+            echo badge($pm === 'any' ? 'Any' : implode(' / ', array_map(fn($m) => $pmLabels[trim($m)] ?? ucfirst(trim($m)), explode(',', $pm))));
+          ?></td>
           <td style="font-size:12px;color:var(--text3)"><?= time_ago($inv['created_at']) ?></td>
           <td><?= badge($inv['status']) ?></td>
           <td>
