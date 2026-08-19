@@ -128,37 +128,69 @@ foreach ($maturingHoldings as $mh) {
 }
 $log("Matured {$maturedCount} holding(s).");
 
-// Schedule next payouts
+// Schedule payouts — evaluate ALL active holdings each run so missed cron days
+// are backfilled. Amounts are capped at the exact total ROI so drift can't
+// over- or under-pay, and existing mid-flight holdings are never double-paid.
 $holdings = DB::fetchAll(
     "SELECT ih.*, i.roi, i.payout_frequency, i.duration_value, i.duration_unit
      FROM investment_holdings ih
      JOIN investments i ON i.id = ih.investment_id
      WHERE ih.status = 'active'
-     AND ih.id NOT IN (SELECT holding_id FROM payout_schedules WHERE status='scheduled' AND due_date > CURDATE())
-     LIMIT 200"
+     LIMIT 500"
 );
+$today = date('Y-m-d');
+$scheduledCount = 0;
 
 foreach ($holdings as $h) {
-    // ROI is the total return over the whole duration; distribute it across periods.
-    $amount = calc_period_return(
-        (float)$h['amount'], (float)$h['roi'], $h['payout_frequency'],
-        (int)$h['duration_value'], $h['duration_unit']
-    );
-    $nextDate = match($h['payout_frequency']) {
-        'daily'       => date('Y-m-d', strtotime('+1 day')),
-        'weekly'      => date('Y-m-d', strtotime('+1 week')),
-        'quarterly'   => date('Y-m-d', strtotime('+3 months')),
-        'semi_annual' => date('Y-m-d', strtotime('+6 months')),
-        'at_maturity' => $h['end_date'],
-        default       => date('Y-m-d', strtotime('+1 month')),
-    };
-    if ($h['end_date'] >= $nextDate) {
-        $existing = DB::fetch("SELECT id FROM payout_schedules WHERE holding_id=? AND due_date=?", [$h['id'], $nextDate]);
-        if (!$existing) {
-            DB::query("INSERT INTO payout_schedules (holding_id, user_id, amount, due_date) VALUES (?,?,?,?)",
-                [$h['id'], $h['user_id'], round($amount, 2), $nextDate]);
+    $reinvest = (bool) ($h['auto_reinvest'] ?? false);
+
+    if ($reinvest) {
+        // Compounding holdings have no fixed total — keep the simple "one next
+        // payout" behaviour, guarded against duplicates.
+        if (DB::fetch("SELECT id FROM payout_schedules WHERE holding_id=? AND status='scheduled' AND due_date > ?", [$h['id'], $today])) continue;
+        $amount = calc_period_return((float)$h['amount'], (float)$h['roi'], $h['payout_frequency'], (int)$h['duration_value'], $h['duration_unit']);
+        $nextDate = match($h['payout_frequency']) {
+            'daily'=>date('Y-m-d', strtotime('+1 day')), 'weekly'=>date('Y-m-d', strtotime('+1 week')),
+            'quarterly'=>date('Y-m-d', strtotime('+3 months')), 'semi_annual'=>date('Y-m-d', strtotime('+6 months')),
+            'at_maturity'=>$h['end_date'], default=>date('Y-m-d', strtotime('+1 month')),
+        };
+        if ($h['end_date'] >= $nextDate && !DB::fetch("SELECT id FROM payout_schedules WHERE holding_id=? AND due_date=?", [$h['id'], $nextDate])) {
+            DB::query("INSERT INTO payout_schedules (holding_id, user_id, amount, due_date) VALUES (?,?,?,?)", [$h['id'], $h['user_id'], round($amount, 2), $nextDate]);
+            $scheduledCount++;
         }
+        continue;
+    }
+
+    // Standard holdings: exact, backfillable schedule anchored to start_date.
+    $dates = build_payout_dates($h['start_date'], $h['end_date'], $h['payout_frequency']);
+    $n = count($dates);
+    if ($n === 0) continue;
+
+    $total = round((float)$h['amount'] * (float)$h['roi'] / 100, 2);
+    // Total already paid or still scheduled — the cap that prevents over-payment.
+    $already = (float) (DB::fetch("SELECT COALESCE(SUM(amount),0) s FROM payout_schedules WHERE holding_id=? AND status IN ('paid','scheduled')", [$h['id']])['s'] ?? 0);
+    $remaining = round($total - $already, 2);
+    if ($remaining <= 0.005) continue; // fully covered
+
+    $per  = round($total / $n, 2);
+    $have = DB::fetchAll("SELECT due_date FROM payout_schedules WHERE holding_id=? AND status IN ('paid','scheduled')", [$h['id']]);
+    $have = array_flip(array_map(fn($r) => substr((string)$r['due_date'], 0, 10), $have));
+
+    foreach ($dates as $d) {
+        if ($remaining <= 0.005) break;
+        if (isset($have[$d])) continue;                 // already have a row for this date
+        $amt = min($per, $remaining);
+        if ($d > $today) {                              // create just the next upcoming date, then stop
+            DB::query("INSERT INTO payout_schedules (holding_id, user_id, amount, due_date) VALUES (?,?,?,?)", [$h['id'], $h['user_id'], round($amt, 2), $d]);
+            $scheduledCount++;
+            break;
+        }
+        // backfill any past-due date that was missed
+        DB::query("INSERT INTO payout_schedules (holding_id, user_id, amount, due_date) VALUES (?,?,?,?)", [$h['id'], $h['user_id'], round($amt, 2), $d]);
+        $remaining = round($remaining - $amt, 2);
+        $scheduledCount++;
     }
 }
+$log("Scheduled {$scheduledCount} payout(s).");
 
 $log('=== Cron Completed ===');

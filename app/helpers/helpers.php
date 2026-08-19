@@ -420,6 +420,34 @@ function calc_total_return(float $amount, float $roiPercent): float {
     return $amount * ($roiPercent / 100);
 }
 
+/**
+ * The full ordered list of payout due-dates for a holding, anchored to its
+ * start date (first payout one period after start, last on/before end_date).
+ * 'at_maturity' yields a single date on end_date. Used by the payout cron to
+ * build an exact, backfillable schedule.
+ */
+function build_payout_dates(string $startDate, string $endDate, string $frequency): array {
+    if ($frequency === 'at_maturity') return [$endDate];
+    $step = match ($frequency) {
+        'daily'       => '+1 day',
+        'weekly'      => '+1 week',
+        'quarterly'   => '+3 months',
+        'semi_annual' => '+6 months',
+        default       => '+1 month',
+    };
+    $dates = [];
+    $d    = new DateTime($startDate);
+    $endD = new DateTime($endDate);
+    $d->modify($step); // first payout one period after start
+    $guard = 0;
+    while ($d <= $endD && $guard++ < 5000) {
+        $dates[] = $d->format('Y-m-d');
+        $d->modify($step);
+    }
+    if (empty($dates)) $dates = [$endDate]; // sub-period plans still pay at maturity
+    return $dates;
+}
+
 // ── Pagination ────────────────────────────────────────────────
 
 function paginate(string $countSql, string $dataSql, array $params, int $page, int $perPage = 20): array {
