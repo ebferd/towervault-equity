@@ -10,7 +10,7 @@ $hasBal      = $walletBal >= (float)$invoice['amount'];
 
 // Build list of methods allowed by the invoice setting
 $invoiceAllowed = $invoice['payment_method'] === 'any'
-    ? ['wallet','crypto','paypal','wire']
+    ? ['wallet','crypto','paypal','zelle','cashapp','wire']
     : ($invoice['payment_method'] === 'crypto'
         ? ['wallet','crypto']
         : ['wallet', $invoice['payment_method']]);
@@ -20,12 +20,16 @@ $enabledByAdmin = [];
 if (platform_setting('invoice_wallet_payment','1') === '1') $enabledByAdmin[] = 'wallet';
 if (platform_setting('payment_crypto','1') === '1') $enabledByAdmin[] = 'crypto';
 if (platform_setting('payment_paypal','1') === '1') $enabledByAdmin[] = 'paypal';
+if (platform_setting('payment_zelle','1')  === '1') $enabledByAdmin[] = 'zelle';
+if (platform_setting('payment_cashapp','1')=== '1') $enabledByAdmin[] = 'cashapp';
 if (platform_setting('payment_wire','1')   === '1') $enabledByAdmin[] = 'wire';
 $allowedMethods = array_values(array_intersect($invoiceAllowed, $enabledByAdmin));
 
 $hasAnyCrypto   = in_array('crypto', $allowedMethods);
 $cryptoReady    = !empty(array_filter($cryptoAddrs));
 $paypalReady    = !empty($paypalEmail);
+$zelleReady     = !empty($zelleInfo['recipient']);
+$cashappReady   = !empty($cashappInfo['tag']);
 ?>
 <style>
 .inv-pg{max-width:880px;margin:0 auto}
@@ -298,6 +302,28 @@ $paypalReady    = !empty($paypalEmail);
           </div>
           <?php endif; ?>
 
+          <!-- Zelle -->
+          <?php if (in_array('zelle', $allowedMethods, true)): ?>
+          <div class="pm-opt<?= !$zelleReady?' pm-opt-disabled':'' ?>" id="pm-zelle" onclick="<?= $zelleReady?"selectMethod('zelle',this)":'void(0)' ?>">
+            <div class="pm-ic paypal">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z" opacity="0"/><path d="M7 8h10M7 16h10M17 8l-10 8"/></svg>
+            </div>
+            <div><div class="pm-name">Zelle</div><div class="pm-hint"><?= $zelleReady ? 'Send to ' . htmlspecialchars($zelleInfo['recipient']) : 'Contact support for Zelle details' ?></div></div>
+            <div class="pm-check"></div>
+          </div>
+          <?php endif; ?>
+
+          <!-- Cash App -->
+          <?php if (in_array('cashapp', $allowedMethods, true)): ?>
+          <div class="pm-opt<?= !$cashappReady?' pm-opt-disabled':'' ?>" id="pm-cashapp" onclick="<?= $cashappReady?"selectMethod('cashapp',this)":'void(0)' ?>">
+            <div class="pm-ic crypto">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+            <div><div class="pm-name">Cash App</div><div class="pm-hint"><?= $cashappReady ? 'Send to ' . htmlspecialchars($cashappInfo['tag']) : 'Contact support for Cash App details' ?></div></div>
+            <div class="pm-check"></div>
+          </div>
+          <?php endif; ?>
+
           <!-- Wire -->
           <?php if (in_array('wire', $allowedMethods, true)): ?>
           <div class="pm-opt" id="pm-wire" onclick="selectMethod('wire',this)">
@@ -370,6 +396,8 @@ const PAYPAL_ME    = <?= json_encode($paypalMe) ?>;
 const WALLET_BAL   = <?= (float)$walletBal ?>;
 const WIRE = <?= json_encode($wireDetails) ?>;
 const CRYPTO_ADDRS = <?= json_encode($cryptoAddrs) ?>;
+const ZELLE   = <?= json_encode($zelleInfo) ?>;
+const CASHAPP = <?= json_encode($cashappInfo) ?>;
 
 let currentMethod = '';
 let currentCoin   = '';
@@ -475,6 +503,25 @@ function buildPaymentDetails(data) {
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy email
       </button>
       ${PAYPAL_ME ? `<a href="${PAYPAL_ME}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;color:var(--em-600);margin-top:4px;text-decoration:none">Open PayPal.me →</a>` : ''}
+    </div>
+    <div class="pay-detail-box">
+      <div class="pay-detail-lbl">Include this reference in the payment note</div>
+      <div class="pay-detail-val" style="font-family:monospace">${depositRef}</div>
+      <button class="pay-copy-btn" onclick="copyText('${depositRef}',this)">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy reference
+      </button>
+    </div>`;
+  } else if (currentMethod === 'zelle' || currentMethod === 'cashapp') {
+    const m = currentMethod === 'zelle'
+      ? { title: 'Send Zelle payment to', value: ZELLE.recipient, name: ZELLE.name, copy: 'Copy Zelle details' }
+      : { title: 'Send Cash App payment to', value: CASHAPP.tag, name: CASHAPP.name, copy: 'Copy $Cashtag' };
+    html = `<div class="pay-detail-box">
+      <div class="pay-detail-lbl">${m.title}</div>
+      <div class="pay-detail-val">${m.value}</div>
+      ${m.name ? `<div style="font-size:11.5px;color:var(--mist-500);margin-top:2px">Recipient: ${m.name}</div>` : ''}
+      <button class="pay-copy-btn" onclick="copyText('${String(m.value).replace(/'/g,"\\'")}',this)">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> ${m.copy}
+      </button>
     </div>
     <div class="pay-detail-box">
       <div class="pay-detail-lbl">Include this reference in the payment note</div>

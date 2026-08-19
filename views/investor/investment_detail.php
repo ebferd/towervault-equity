@@ -159,6 +159,8 @@ $_wireAcc = platform_setting('wire_account_name', '');
 $_wireNum = platform_setting('wire_account_number', '');
 $_wireRt  = platform_setting('wire_routing', '');
 $_wireSw  = platform_setting('wire_swift', '');
+$_zelleRcp = platform_setting('zelle_recipient', ''); $_zelleNm = platform_setting('zelle_name', '');
+$_cashTag  = platform_setting('cashapp_tag', '');      $_cashNm  = platform_setting('cashapp_name', '');
 ?>
 <!-- Invest Modal -->
 <div id="idi-modal" class="modal-overlay" style="display:none">
@@ -193,7 +195,13 @@ $_wireSw  = platform_setting('wire_swift', '');
                 <div id="idir-wallet" class="pmethod-radio"></div>
               </div>
             <?php endif; ?>
-            <?php foreach (array_filter([platform_setting('payment_crypto','1')==='1'?['crypto','Cryptocurrency','BTC · ETH · USDT · USDC']:null,platform_setting('payment_paypal','1')==='1'?['paypal','PayPal','Instant transfer']:null,platform_setting('payment_wire','1')==='1'?['wire','Wire Transfer','3–5 business days']:null]) as [$mid,$ml,$ms]): ?>
+            <?php foreach (array_filter([
+                platform_setting('payment_crypto','1')==='1'?['crypto','Cryptocurrency','BTC · ETH · USDT · USDC']:null,
+                platform_setting('payment_paypal','1')==='1'?['paypal','PayPal','Instant transfer']:null,
+                (platform_setting('payment_zelle','1')==='1' && $_zelleRcp!=='')?['zelle','Zelle','Bank-to-bank (US)']:null,
+                (platform_setting('payment_cashapp','1')==='1' && $_cashTag!=='')?['cashapp','Cash App','Instant transfer']:null,
+                platform_setting('payment_wire','1')==='1'?['wire','Wire Transfer','3–5 business days']:null,
+            ]) as [$mid,$ml,$ms]): ?>
               <div onclick="idm('<?= $mid ?>')" id="idim-<?= $mid ?>" class="pmethod-row">
                 <div><div class="pmethod-name"><?= $ml ?></div><div class="pmethod-sub"><?= $ms ?></div></div>
                 <div id="idir-<?= $mid ?>" class="pmethod-radio"></div>
@@ -226,6 +234,8 @@ const IDI_CRYPTO = <?= json_encode(array_filter($_cryptoAddr)) ?>;
 const IDI_PP_EMAIL = <?= json_encode($_ppEmail) ?>;
 const IDI_PP_ME   = <?= json_encode($_ppMe) ?>;
 const IDI_WIRE    = {bank:<?= json_encode($_wireBnk) ?>,acc:<?= json_encode($_wireAcc) ?>,num:<?= json_encode($_wireNum) ?>,rt:<?= json_encode($_wireRt) ?>,sw:<?= json_encode($_wireSw) ?>};
+const IDI_ZELLE   = {recipient:<?= json_encode($_zelleRcp) ?>,name:<?= json_encode($_zelleNm) ?>};
+const IDI_CASHAPP = {tag:<?= json_encode($_cashTag) ?>,name:<?= json_encode($_cashNm) ?>};
 const IDI_SYM     = <?= json_encode($sym) ?>;
 let idiM = null, idiCoin = null;
 
@@ -239,7 +249,7 @@ function idiClose(){
 }
 function idm(m){
   idiM=m;
-  ['wallet','crypto','paypal','wire'].forEach(id=>{
+  ['wallet','crypto','paypal','zelle','cashapp','wire'].forEach(id=>{
     const el=document.getElementById('idim-'+id);
     const r=document.getElementById('idir-'+id);
     if(!el)return;
@@ -271,6 +281,15 @@ function idiShowInstructions(method, amount, ref){
   } else if (method === 'paypal') {
     html += idiRow('Send to', IDI_PP_EMAIL, true);
     if(IDI_PP_ME) html += '<a href="'+IDI_PP_ME+'" target="_blank" class="qbtn primary" style="width:100%;height:42px;margin:.75rem 0">Pay via PayPal.me</a>';
+    html += idiRow('Reference', ref, true);
+  } else if (method === 'zelle') {
+    html += idiRow('Send Zelle to', IDI_ZELLE.recipient, true);
+    if(IDI_ZELLE.name) html += idiRow('Recipient', IDI_ZELLE.name, false);
+    html += idiRow('Reference', ref, true);
+  } else if (method === 'cashapp') {
+    html += idiRow('Send Cash App to', IDI_CASHAPP.tag, true);
+    if(IDI_CASHAPP.name) html += idiRow('Recipient', IDI_CASHAPP.name, false);
+    html += idiRow('Reference', ref, true);
   } else {
     html += idiRow('Bank',IDI_WIRE.bank,false)+idiRow('Account Name',IDI_WIRE.acc,false)+idiRow('Account Number',IDI_WIRE.num,true)+idiRow('Routing / Sort Code',IDI_WIRE.rt,true)+idiRow('SWIFT / BIC',IDI_WIRE.sw,true)+idiRow('Reference',ref,true);
   }

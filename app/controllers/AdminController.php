@@ -1157,13 +1157,15 @@ class AdminController {
             // Features
             'kyc_enabled','two_fa_enabled','registration_open','maintenance_mode','email_verification_enabled',
             // Payments — toggles
-            'payment_crypto','payment_paypal','payment_wire','invoice_wallet_payment',
+            'payment_crypto','payment_paypal','payment_wire','payment_zelle','payment_cashapp','invoice_wallet_payment',
             // Payments — crypto wallets
             'crypto_btc_address','crypto_eth_address','crypto_usdt_address','crypto_usdc_address',
             // Payments — PayPal
             'paypal_email','paypal_me_link',
             // Payments — wire
             'wire_bank_name','wire_account_name','wire_account_number','wire_routing','wire_swift','wire_bank_country',
+            // Payments — Zelle & Cash App
+            'zelle_recipient','zelle_name','cashapp_tag','cashapp_name',
             // Payments — misc
             'deposit_timeout','min_deposit','min_withdrawal',
             // Referrals
@@ -1194,13 +1196,16 @@ class AdminController {
             'kyc_enabled' => 'features', 'two_fa_enabled' => 'features',
             'registration_open' => 'features', 'maintenance_mode' => 'features',
             'email_verification_enabled' => 'features',
-            'payment_crypto' => 'payments', 'payment_paypal' => 'payments', 'payment_wire' => 'payments', 'invoice_wallet_payment' => 'payments',
+            'payment_crypto' => 'payments', 'payment_paypal' => 'payments', 'payment_wire' => 'payments',
+            'payment_zelle' => 'payments', 'payment_cashapp' => 'payments', 'invoice_wallet_payment' => 'payments',
             'crypto_btc_address' => 'payments', 'crypto_eth_address' => 'payments',
             'crypto_usdt_address' => 'payments', 'crypto_usdc_address' => 'payments',
             'paypal_email' => 'payments', 'paypal_me_link' => 'payments',
             'wire_bank_name' => 'payments', 'wire_account_name' => 'payments',
             'wire_account_number' => 'payments', 'wire_routing' => 'payments',
             'wire_swift' => 'payments', 'wire_bank_country' => 'payments',
+            'zelle_recipient' => 'payments', 'zelle_name' => 'payments',
+            'cashapp_tag' => 'payments', 'cashapp_name' => 'payments',
             'deposit_timeout' => 'payments', 'min_deposit' => 'payments', 'min_withdrawal' => 'payments',
             'referral_commission' => 'referrals',
             'smtp_host' => 'email', 'smtp_port' => 'email', 'smtp_user' => 'email',
@@ -1214,7 +1219,7 @@ class AdminController {
         ];
 
         $rawKeys      = ['legal_terms', 'legal_privacy', 'smartsupp_code'];
-        $checkboxKeys = ['kyc_enabled','two_fa_enabled','registration_open','maintenance_mode','email_verification_enabled','payment_crypto','payment_paypal','payment_wire','invoice_wallet_payment'];
+        $checkboxKeys = ['kyc_enabled','two_fa_enabled','registration_open','maintenance_mode','email_verification_enabled','payment_crypto','payment_paypal','payment_wire','payment_zelle','payment_cashapp','invoice_wallet_payment'];
         foreach ($allowed as $key) {
             if (isset($_POST[$key])) {
                 // Hidden+checkbox pattern always submits a value ('0' or '1') — use it directly
@@ -1530,7 +1535,7 @@ class AdminController {
         if (!$uid || !$title || $amount <= 0 || !$due) {
             json_response(['success' => false, 'error' => 'All fields are required.']);
         }
-        $validMethods = ['any','crypto','paypal','wire'];
+        $validMethods = ['any','crypto','paypal','wire','zelle','cashapp'];
         if (!in_array($method, $validMethods, true)) $method = 'any';
 
         $user = DB::fetch("SELECT id, first_name, last_name, email FROM users WHERE id=?", [$uid]);

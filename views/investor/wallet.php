@@ -131,6 +131,8 @@ $txTypeLabels = [
 $cryptoEnabled = platform_setting('payment_crypto','1') === '1';
 $paypalEnabled = platform_setting('payment_paypal','1') === '1';
 $wireEnabled   = platform_setting('payment_wire','1') === '1';
+$zelleEnabled  = platform_setting('payment_zelle','1') === '1'  && platform_setting('zelle_recipient','') !== '';
+$cashappEnabled= platform_setting('payment_cashapp','1') === '1' && platform_setting('cashapp_tag','') !== '';
 $minDeposit    = (float) platform_setting('min_deposit', '100');
 $minWithdraw   = (float) platform_setting('min_withdrawal', '50');
 ?>
@@ -163,6 +165,8 @@ $minWithdraw   = (float) platform_setting('min_withdrawal', '50');
           </div>
         <?php endif; ?>
         <?php if ($paypalEnabled): ?><div onclick="selectDep('paypal')" id="dm-paypal" class="pmethod-row"><div><div class="pmethod-name">PayPal</div><div class="pmethod-sub">Instant transfer</div></div><div id="dr-paypal" class="pmethod-radio"></div></div><?php endif; ?>
+        <?php if ($zelleEnabled): ?><div onclick="selectDep('zelle')" id="dm-zelle" class="pmethod-row"><div><div class="pmethod-name">Zelle</div><div class="pmethod-sub">Bank-to-bank (US)</div></div><div id="dr-zelle" class="pmethod-radio"></div></div><?php endif; ?>
+        <?php if ($cashappEnabled): ?><div onclick="selectDep('cashapp')" id="dm-cashapp" class="pmethod-row"><div><div class="pmethod-name">Cash App</div><div class="pmethod-sub">Instant transfer</div></div><div id="dr-cashapp" class="pmethod-radio"></div></div><?php endif; ?>
         <?php if ($wireEnabled): ?><div onclick="selectDep('wire')" id="dm-wire" class="pmethod-row"><div><div class="pmethod-name">Wire Transfer</div><div class="pmethod-sub">3&ndash;5 business days</div></div><div id="dr-wire" class="pmethod-radio"></div></div><?php endif; ?>
         <div id="dep-wire-note" class="alert-banner" style="background:var(--amber-50);border:1px solid var(--amber-100);color:var(--amber-700);display:none">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
@@ -392,7 +396,7 @@ const coinLabels = {
 
 function selectDep(m) {
   depMethod = m; depCoin = null;
-  ['crypto','paypal','wire'].forEach(id => {
+  ['crypto','paypal','zelle','cashapp','wire'].forEach(id => {
     const el = document.getElementById('dm-'+id);
     const r  = document.getElementById('dr-'+id);
     if (!el) return;
@@ -472,6 +476,29 @@ async function startDeposit() {
     <div class="alert-banner" style="background:var(--blue-50);border:1px solid #BFDBFE;color:var(--blue-600)">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       <span>Include the reference code in the PayPal payment note so we can match your payment.</span>
+    </div>`;
+  } else if (depMethod === 'zelle' || depMethod === 'cashapp') {
+    <?php
+      $zelleRecipient = platform_setting('zelle_recipient',''); $zelleName = platform_setting('zelle_name','');
+      $cashTag = platform_setting('cashapp_tag',''); $cashName = platform_setting('cashapp_name','');
+    ?>
+    const manual = depMethod === 'zelle'
+      ? { label: 'Send Zelle payment to', value: <?= json_encode($zelleRecipient) ?>, name: <?= json_encode($zelleName) ?>, copyLbl: 'Copy Zelle details' }
+      : { label: 'Send Cash App payment to', value: <?= json_encode($cashTag) ?>, name: <?= json_encode($cashName) ?>, copyLbl: 'Copy $Cashtag' };
+    details = `<div class="detail-box">
+      <div class="detail-box-lbl">${manual.label}</div>
+      <div class="detail-box-big">${manual.value}</div>
+      ${manual.name ? `<div style="font-size:12px;color:var(--mist-500);margin-top:2px">Recipient: ${manual.name}</div>` : ''}
+      <button class="copy-btn" data-copy="${manual.value}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> ${manual.copyLbl}</button>
+    </div>
+    <div class="detail-box">
+      <div class="detail-box-lbl">Reference code — include in payment note</div>
+      <div class="detail-box-big" style="font-family:monospace;letter-spacing:1px">${depRef}</div>
+      <button class="copy-btn" data-copy="${depRef}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy code</button>
+    </div>
+    <div class="alert-banner" style="background:var(--blue-50);border:1px solid #BFDBFE;color:var(--blue-600)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span>Include the reference code in the payment note so we can match your payment.</span>
     </div>`;
   } else if (depMethod === 'wire') {
     const wire = <?= json_encode([

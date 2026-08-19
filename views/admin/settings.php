@@ -132,7 +132,7 @@
   <div class="section" style="margin-top:1.5rem">
     <div class="section-head"><span class="section-title">Payment Methods</span><span class="section-meta">Enable or disable deposit and withdrawal channels</span></div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem;padding:1.5rem">
-      <?php foreach ([['payment_crypto','Cryptocurrency','BTC · ETH · USDT · USDC'],['payment_paypal','PayPal','Instant transfers'],['payment_wire','Wire Transfer','Bank transfers']] as [$key,$label,$sub]):
+      <?php foreach ([['payment_crypto','Cryptocurrency','BTC · ETH · USDT · USDC'],['payment_paypal','PayPal','Instant transfers'],['payment_wire','Wire Transfer','Bank transfers'],['payment_zelle','Zelle','Bank-to-bank (US)'],['payment_cashapp','Cash App','$Cashtag transfers']] as [$key,$label,$sub]):
         $enabled = ($payments[$key]??'0') === '1';
       ?>
         <div style="border:1px solid var(--border);border-radius:var(--r);padding:1.1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem">
@@ -175,6 +175,28 @@
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
         <div class="fg"><label class="fl">PayPal Receiving Email</label><input class="fi" type="email" name="paypal_email" value="<?= htmlspecialchars($payments['paypal_email']??'') ?>" placeholder="payments@yourdomain.com"/><div style="font-size:11px;color:var(--text3);margin-top:4px">The email investors send PayPal payments to.</div></div>
         <div class="fg"><label class="fl">PayPal.me Link <span class="fl-opt">(optional)</span></label><input class="fi" name="paypal_me_link" value="<?= htmlspecialchars($payments['paypal_me_link']??'') ?>" placeholder="https://paypal.me/yourname"/><div style="font-size:11px;color:var(--text3);margin-top:4px">Shown as a direct payment button.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ZELLE DETAILS -->
+  <div class="section" style="margin-top:1.5rem">
+    <div class="section-head"><span class="section-title">Zelle Details</span><span class="section-meta">Shown to investors paying by Zelle</span></div>
+    <div class="section-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+        <div class="fg"><label class="fl">Zelle Email or Phone</label><input class="fi" name="zelle_recipient" value="<?= htmlspecialchars($payments['zelle_recipient']??'') ?>" placeholder="payments@yourdomain.com or +1 555 123 4567"/><div style="font-size:11px;color:var(--text3);margin-top:4px">The email or US phone number investors send Zelle payments to.</div></div>
+        <div class="fg"><label class="fl">Recipient Name</label><input class="fi" name="zelle_name" value="<?= htmlspecialchars($payments['zelle_name']??'') ?>" placeholder="Name registered on the Zelle account"/></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CASH APP DETAILS -->
+  <div class="section" style="margin-top:1.5rem">
+    <div class="section-head"><span class="section-title">Cash App Details</span><span class="section-meta">Shown to investors paying by Cash App</span></div>
+    <div class="section-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+        <div class="fg"><label class="fl">Cashtag</label><input class="fi" name="cashapp_tag" value="<?= htmlspecialchars($payments['cashapp_tag']??'') ?>" placeholder="$YourCashtag"/><div style="font-size:11px;color:var(--text3);margin-top:4px">Your Cash App $cashtag investors pay to.</div></div>
+        <div class="fg"><label class="fl">Recipient Name <span class="fl-opt">(optional)</span></label><input class="fi" name="cashapp_name" value="<?= htmlspecialchars($payments['cashapp_name']??'') ?>" placeholder="Name on the Cash App account"/></div>
       </div>
     </div>
   </div>

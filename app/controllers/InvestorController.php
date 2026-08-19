@@ -314,7 +314,7 @@ class InvestorController {
             json_response(['success' => false, 'error' => 'Invalid investment details.']);
         }
 
-        $validMethods = ['crypto', 'paypal', 'wire', 'wallet'];
+        $validMethods = ['crypto', 'paypal', 'wire', 'zelle', 'cashapp', 'wallet'];
         if (!in_array($method, $validMethods, true)) {
             json_response(['success' => false, 'error' => 'Invalid payment method.']);
         }
@@ -518,7 +518,7 @@ class InvestorController {
 
         $minDeposit = (float) platform_setting('min_deposit', '100');
         if ($amount < $minDeposit) json_response(['success' => false, 'error' => 'Minimum deposit is ' . fmt_currency($minDeposit) . '.']);
-        if (!in_array($method, ['crypto','paypal','wire'], true)) {
+        if (!in_array($method, ['crypto','paypal','wire','zelle','cashapp'], true)) {
             json_response(['success' => false, 'error' => 'Invalid payment method.']);
         }
         if (platform_setting("payment_{$method}", '1') !== '1') {
@@ -1104,8 +1104,10 @@ class InvestorController {
             'Routing Number' => platform_setting('wire_routing',''),
             'SWIFT / BIC'    => platform_setting('wire_swift',''),
         ];
+        $zelleInfo   = ['recipient' => platform_setting('zelle_recipient',''), 'name' => platform_setting('zelle_name','')];
+        $cashappInfo = ['tag' => platform_setting('cashapp_tag',''), 'name' => platform_setting('cashapp_name','')];
         $depositTimeout = (int) platform_setting('deposit_timeout', '1800');
-        view('investor.invoice_detail', compact('invoice','user','walletBal','cryptoAddrs','paypalEmail','paypalMe','wireDetails','depositTimeout') + ['title' => 'Invoice ' . $ref]);
+        view('investor.invoice_detail', compact('invoice','user','walletBal','cryptoAddrs','paypalEmail','paypalMe','wireDetails','zelleInfo','cashappInfo','depositTimeout') + ['title' => 'Invoice ' . $ref]);
     }
 
     public static function payInvoice(): void {
@@ -1120,12 +1122,14 @@ class InvestorController {
         if (!$invoice) json_response(['success' => false, 'error' => 'Invoice not found or already processed.']);
 
         $invoiceAllowed = $invoice['payment_method'] === 'any'
-            ? ['crypto','paypal','wire']
+            ? ['crypto','paypal','wire','zelle','cashapp']
             : [$invoice['payment_method']];
         $enabledGlobally = [];
         if (platform_setting('payment_crypto','1') === '1') $enabledGlobally[] = 'crypto';
         if (platform_setting('payment_paypal','1') === '1') $enabledGlobally[] = 'paypal';
         if (platform_setting('payment_wire','1')   === '1') $enabledGlobally[] = 'wire';
+        if (platform_setting('payment_zelle','1')  === '1') $enabledGlobally[] = 'zelle';
+        if (platform_setting('payment_cashapp','1')=== '1') $enabledGlobally[] = 'cashapp';
         $allowedMethods = array_intersect($invoiceAllowed, $enabledGlobally);
         if (!in_array($method, $allowedMethods, true)) {
             json_response(['success' => false, 'error' => 'Selected payment method is not available.']);
