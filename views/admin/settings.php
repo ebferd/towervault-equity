@@ -1,7 +1,26 @@
 <?php /* views/admin/settings.php */ ?>
 <div class="page-header"><h1 class="page-title">Platform Settings</h1><p class="page-sub">Control branding, payment methods, and platform features.</p></div>
 
+<style>
+  /* Collapsible settings sections */
+  #settings-form .section-head{cursor:pointer;user-select:none}
+  #settings-form .section-head:hover{background:var(--surface-2,#f7f9fc)}
+  .acc-chevron{margin-left:auto;flex-shrink:0;width:8px;height:8px;border-right:2px solid var(--text3);border-bottom:2px solid var(--text3);transform:rotate(-45deg);transition:transform .18s ease}
+  #settings-form .section:not(.collapsed) .acc-chevron{transform:rotate(45deg)}
+  #settings-form .section.collapsed{margin-bottom:.7rem}
+  #settings-form .section.collapsed .section-head{border-bottom:none}
+  #settings-form .section.collapsed > *:not(.section-head){display:none!important}
+  .acc-bar{display:flex;gap:.5rem;justify-content:flex-end;margin-bottom:1rem}
+  .acc-bar button{font-size:12px;font-weight:600;color:var(--text3);background:none;border:1px solid var(--border);border-radius:6px;padding:5px 12px;cursor:pointer}
+  .acc-bar button:hover{color:var(--text);border-color:var(--text3)}
+</style>
+
 <div id="settings-alert"></div>
+
+<div class="acc-bar">
+  <button type="button" id="acc-expand">Expand all</button>
+  <button type="button" id="acc-collapse">Collapse all</button>
+</div>
 
 <form id="settings-form" enctype="multipart/form-data">
   <input type="hidden" name="_token" value="<?= csrf_token() ?>"/>
@@ -149,6 +168,21 @@
       </div>
       <?php $iwEnabled = ($payments['invoice_wallet_payment']??'1') === '1'; ?>
       <label class="toggle"><input type="hidden" name="invoice_wallet_payment" value="0"/><input type="checkbox" name="invoice_wallet_payment" value="1" <?= $iwEnabled?'checked':'' ?> onchange="this.previousElementSibling.value=this.checked?'1':'0'"/><div class="t-track"></div><div class="t-thumb"></div></label>
+    </div>
+  </div>
+
+  <!-- WITHDRAWAL METHODS TOGGLE -->
+  <div class="section" style="margin-top:1.5rem">
+    <div class="section-head"><span class="section-title">Withdrawal Methods</span><span class="section-meta">Enable or disable each channel investors can withdraw through</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem;padding:1.5rem">
+      <?php foreach ([['withdraw_crypto','Cryptocurrency','BTC · ETH · USDT · USDC'],['withdraw_paypal','PayPal','To investor PayPal'],['withdraw_wire','Wire Transfer','To investor bank'],['withdraw_zelle','Zelle','To investor Zelle'],['withdraw_cashapp','Cash App','To investor $Cashtag']] as [$key,$label,$sub]):
+        $enabled = ($payments[$key]??'1') === '1';
+      ?>
+        <div style="border:1px solid var(--border);border-radius:var(--r);padding:1.1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem">
+          <div><div style="font-size:13px;font-weight:600;margin-bottom:2px"><?= $label ?></div><div style="font-size:11.5px;color:var(--text3)"><?= $sub ?></div></div>
+          <label class="toggle"><input type="hidden" name="<?= $key ?>" value="0"/><input type="checkbox" name="<?= $key ?>" value="1" <?= $enabled?'checked':'' ?> onchange="this.previousElementSibling.value=this.checked?'1':'0'"/><div class="t-track"></div><div class="t-thumb"></div></label>
+        </div>
+      <?php endforeach; ?>
     </div>
   </div>
 
@@ -307,6 +341,23 @@ _smartsupp.key = 'YOUR_KEY_HERE';
 </form>
 
 <script>
+// ── Collapsible sections ──────────────────────────────────────
+(function(){
+  const sections = document.querySelectorAll('#settings-form .section');
+  sections.forEach(sec => {
+    const head = sec.querySelector('.section-head');
+    if (!head) return;
+    const chev = document.createElement('span');
+    chev.className = 'acc-chevron';
+    head.appendChild(chev);
+    sec.classList.add('collapsed'); // start collapsed for a short, scannable page
+    head.addEventListener('click', () => sec.classList.toggle('collapsed'));
+  });
+  const setAll = c => sections.forEach(s => s.classList.toggle('collapsed', c));
+  document.getElementById('acc-expand')?.addEventListener('click', () => setAll(false));
+  document.getElementById('acc-collapse')?.addEventListener('click', () => setAll(true));
+})();
+
 document.getElementById('smtp-test-btn').addEventListener('click', async function() {
   const email = document.getElementById('smtp-test-email').value.trim();
   if (!email) { document.getElementById('smtp-test-alert').innerHTML='<div class="alert alert-err">Enter a recipient email first.</div>'; return; }

@@ -720,20 +720,32 @@ class InvestorController {
             json_response(['success' => false, 'error' => 'Insufficient wallet balance.']);
         }
 
-        if (!in_array($method, ['crypto','paypal','wire'], true)) {
+        if (!in_array($method, ['crypto','paypal','wire','zelle','cashapp'], true)) {
             json_response(['success' => false, 'error' => 'Invalid withdrawal method.']);
         }
-        if (platform_setting("payment_{$method}", '1') !== '1') {
+        if (platform_setting("withdraw_{$method}", '1') !== '1') {
             json_response(['success' => false, 'error' => 'This withdrawal method is currently unavailable.']);
         }
 
         // Collect method-specific details
         $details = match ($method) {
-            'wire'   => ['bank_name' => sanitize($_POST['bank_name'] ?? ''), 'account_name' => sanitize($_POST['account_name'] ?? ''), 'account_number' => sanitize($_POST['account_number'] ?? ''), 'routing' => sanitize($_POST['routing'] ?? ''), 'bank_address' => sanitize($_POST['bank_address'] ?? '')],
-            'crypto' => ['coin' => sanitize($_POST['coin'] ?? ''), 'wallet_address' => sanitize($_POST['wallet_address'] ?? ''), 'memo' => sanitize($_POST['memo'] ?? '')],
-            'paypal' => ['paypal_email' => sanitize_email($_POST['paypal_email'] ?? '')],
-            default  => [],
+            'wire'    => ['bank_name' => sanitize($_POST['bank_name'] ?? ''), 'account_name' => sanitize($_POST['account_name'] ?? ''), 'account_number' => sanitize($_POST['account_number'] ?? ''), 'routing' => sanitize($_POST['routing'] ?? ''), 'bank_address' => sanitize($_POST['bank_address'] ?? '')],
+            'crypto'  => ['coin' => sanitize($_POST['coin'] ?? ''), 'wallet_address' => sanitize($_POST['wallet_address'] ?? ''), 'memo' => sanitize($_POST['memo'] ?? '')],
+            'paypal'  => ['paypal_email' => sanitize_email($_POST['paypal_email'] ?? '')],
+            'zelle'   => ['zelle_recipient' => sanitize($_POST['zelle_recipient'] ?? ''), 'account_name' => sanitize($_POST['account_name'] ?? '')],
+            'cashapp' => ['cashapp_tag' => sanitize($_POST['cashapp_tag'] ?? '')],
+            default   => [],
         };
+        // Guard: required destination detail must be present
+        $missing = match ($method) {
+            'wire'    => $details['account_number'] === '',
+            'crypto'  => $details['wallet_address'] === '',
+            'paypal'  => $details['paypal_email'] === '',
+            'zelle'   => $details['zelle_recipient'] === '',
+            'cashapp' => $details['cashapp_tag'] === '',
+            default   => true,
+        };
+        if ($missing) json_response(['success' => false, 'error' => 'Please provide your payout details for the selected method.']);
 
         DB::beginTransaction();
         try {

@@ -133,6 +133,12 @@ $paypalEnabled = platform_setting('payment_paypal','1') === '1';
 $wireEnabled   = platform_setting('payment_wire','1') === '1';
 $zelleEnabled  = platform_setting('payment_zelle','1') === '1'  && platform_setting('zelle_recipient','') !== '';
 $cashappEnabled= platform_setting('payment_cashapp','1') === '1' && platform_setting('cashapp_tag','') !== '';
+// Withdrawal channels are toggled independently of deposits
+$wdWire    = platform_setting('withdraw_wire','1') === '1';
+$wdCrypto  = platform_setting('withdraw_crypto','1') === '1';
+$wdPaypal  = platform_setting('withdraw_paypal','1') === '1';
+$wdZelle   = platform_setting('withdraw_zelle','1') === '1';
+$wdCashapp = platform_setting('withdraw_cashapp','1') === '1';
 $minDeposit    = (float) platform_setting('min_deposit', '100');
 $minWithdraw   = (float) platform_setting('min_withdrawal', '50');
 ?>
@@ -219,9 +225,11 @@ $minWithdraw   = (float) platform_setting('min_withdrawal', '50');
           <div class="fhelp">Minimum: <?= fmt_currency($minWithdraw) ?></div>
         </div>
         <label class="fl" style="margin-bottom:.5rem">Withdrawal method</label>
-        <?php if ($wireEnabled): ?><div onclick="selectWd('wire')" id="wm-wire" class="pmethod-row"><div><div class="pmethod-name">Wire Transfer</div><div class="pmethod-sub">3&ndash;5 business days</div></div><div id="wr-wire" class="pmethod-radio"></div></div><?php endif; ?>
-        <?php if ($cryptoEnabled): ?><div onclick="selectWd('crypto')" id="wm-crypto" class="pmethod-row"><div><div class="pmethod-name">Cryptocurrency</div><div class="pmethod-sub">BTC &middot; ETH &middot; USDT &middot; USDC</div></div><div id="wr-crypto" class="pmethod-radio"></div></div><?php endif; ?>
-        <?php if ($paypalEnabled): ?><div onclick="selectWd('paypal')" id="wm-paypal" class="pmethod-row"><div><div class="pmethod-name">PayPal</div><div class="pmethod-sub">Instant</div></div><div id="wr-paypal" class="pmethod-radio"></div></div><?php endif; ?>
+        <?php if ($wdWire): ?><div onclick="selectWd('wire')" id="wm-wire" class="pmethod-row"><div><div class="pmethod-name">Wire Transfer</div><div class="pmethod-sub">3&ndash;5 business days</div></div><div id="wr-wire" class="pmethod-radio"></div></div><?php endif; ?>
+        <?php if ($wdCrypto): ?><div onclick="selectWd('crypto')" id="wm-crypto" class="pmethod-row"><div><div class="pmethod-name">Cryptocurrency</div><div class="pmethod-sub">BTC &middot; ETH &middot; USDT &middot; USDC</div></div><div id="wr-crypto" class="pmethod-radio"></div></div><?php endif; ?>
+        <?php if ($wdPaypal): ?><div onclick="selectWd('paypal')" id="wm-paypal" class="pmethod-row"><div><div class="pmethod-name">PayPal</div><div class="pmethod-sub">Instant</div></div><div id="wr-paypal" class="pmethod-radio"></div></div><?php endif; ?>
+        <?php if ($wdZelle): ?><div onclick="selectWd('zelle')" id="wm-zelle" class="pmethod-row"><div><div class="pmethod-name">Zelle</div><div class="pmethod-sub">Bank-to-bank (US)</div></div><div id="wr-zelle" class="pmethod-radio"></div></div><?php endif; ?>
+        <?php if ($wdCashapp): ?><div onclick="selectWd('cashapp')" id="wm-cashapp" class="pmethod-row"><div><div class="pmethod-name">Cash App</div><div class="pmethod-sub">Instant</div></div><div id="wr-cashapp" class="pmethod-radio"></div></div><?php endif; ?>
         <div id="wd-fields"></div>
         <button type="submit" class="qbtn primary" style="width:100%;height:44px;margin-top:.5rem" id="wd-btn"><span>Submit withdrawal</span></button>
       </form>
@@ -549,11 +557,13 @@ const wdFields = {
   wire:   '<div class="fg"><label class="fl">Bank name</label><input class="fi" name="bank_name" required placeholder="e.g. Bank of America"/></div><div class="fg"><label class="fl">Account holder name</label><input class="fi" name="account_name" required placeholder="Full legal name"/></div><div class="fg"><label class="fl">Account number / IBAN</label><input class="fi" name="account_number" required placeholder="Enter account number"/></div><div class="fg"><label class="fl">Routing / SWIFT / BIC</label><input class="fi" name="routing" required placeholder="e.g. 021000089 or BOFAUS3N"/></div><div class="fg"><label class="fl">Bank address</label><input class="fi" name="bank_address" required placeholder="Bank branch address"/></div>',
   crypto: '<div class="fg"><label class="fl">Coin / network</label><input class="fi" name="coin" required placeholder="e.g. Bitcoin (BTC), USDT TRC20"/></div><div class="fg"><label class="fl">Wallet address</label><input class="fi" name="wallet_address" required placeholder="Enter your wallet address"/></div><div class="fg"><label class="fl">Memo / tag <span style="font-weight:400;color:var(--mist-400)">(if required)</span></label><input class="fi" name="memo" placeholder="Leave blank if not required"/></div>',
   paypal: '<div class="fg"><label class="fl">PayPal email address</label><input class="fi" type="email" name="paypal_email" required placeholder="paypal@email.com"/></div>',
+  zelle:  '<div class="fg"><label class="fl">Your Zelle email or phone</label><input class="fi" name="zelle_recipient" required placeholder="email or US phone registered with Zelle"/></div><div class="fg"><label class="fl">Account holder name</label><input class="fi" name="account_name" required placeholder="Full name on the account"/></div>',
+  cashapp:'<div class="fg"><label class="fl">Your Cash App $Cashtag</label><input class="fi" name="cashapp_tag" required placeholder="$YourCashtag"/></div>',
 };
 
 function selectWd(m) {
   wdMethod = m;
-  ['wire','crypto','paypal'].forEach(id => {
+  ['wire','crypto','paypal','zelle','cashapp'].forEach(id => {
     const el = document.getElementById('wm-'+id);
     const r  = document.getElementById('wr-'+id);
     if (!el) return;

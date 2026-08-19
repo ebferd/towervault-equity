@@ -1156,8 +1156,10 @@ class AdminController {
             'platform_currency','platform_symbol',
             // Features
             'kyc_enabled','two_fa_enabled','registration_open','maintenance_mode','email_verification_enabled',
-            // Payments — toggles
+            // Payments — deposit toggles
             'payment_crypto','payment_paypal','payment_wire','payment_zelle','payment_cashapp','invoice_wallet_payment',
+            // Payments — withdrawal toggles
+            'withdraw_crypto','withdraw_paypal','withdraw_wire','withdraw_zelle','withdraw_cashapp',
             // Payments — crypto wallets
             'crypto_btc_address','crypto_eth_address','crypto_usdt_address','crypto_usdc_address',
             // Payments — PayPal
@@ -1206,6 +1208,8 @@ class AdminController {
             'wire_swift' => 'payments', 'wire_bank_country' => 'payments',
             'zelle_recipient' => 'payments', 'zelle_name' => 'payments',
             'cashapp_tag' => 'payments', 'cashapp_name' => 'payments',
+            'withdraw_crypto' => 'payments', 'withdraw_paypal' => 'payments', 'withdraw_wire' => 'payments',
+            'withdraw_zelle' => 'payments', 'withdraw_cashapp' => 'payments',
             'deposit_timeout' => 'payments', 'min_deposit' => 'payments', 'min_withdrawal' => 'payments',
             'referral_commission' => 'referrals',
             'smtp_host' => 'email', 'smtp_port' => 'email', 'smtp_user' => 'email',
@@ -1219,7 +1223,7 @@ class AdminController {
         ];
 
         $rawKeys      = ['legal_terms', 'legal_privacy', 'smartsupp_code'];
-        $checkboxKeys = ['kyc_enabled','two_fa_enabled','registration_open','maintenance_mode','email_verification_enabled','payment_crypto','payment_paypal','payment_wire','payment_zelle','payment_cashapp','invoice_wallet_payment'];
+        $checkboxKeys = ['kyc_enabled','two_fa_enabled','registration_open','maintenance_mode','email_verification_enabled','payment_crypto','payment_paypal','payment_wire','payment_zelle','payment_cashapp','invoice_wallet_payment','withdraw_crypto','withdraw_paypal','withdraw_wire','withdraw_zelle','withdraw_cashapp'];
         foreach ($allowed as $key) {
             if (isset($_POST[$key])) {
                 // Hidden+checkbox pattern always submits a value ('0' or '1') — use it directly
