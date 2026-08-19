@@ -86,7 +86,7 @@ $txTypeLabels = [
         <thead><tr><th>Transaction</th><th>Date</th><th>Method</th><th>Amount</th><th>Status</th></tr></thead>
         <tbody>
           <?php foreach ($data as $tx): [$icoName, $icoColor, $icoBg] = nv_tx_icon($tx['type']);
-            $credit = in_array($tx['type'], ['return','deposit','referral_commission','adjustment'], true);
+            $credit = in_array($tx['type'], ['return','principal','deposit','referral_commission','adjustment','transfer_received'], true);
           ?>
             <tr>
               <td>
@@ -107,7 +107,7 @@ $txTypeLabels = [
     <!-- Mobile cards -->
     <div class="wtx-cards">
       <?php foreach ($data as $tx): [$icoName, $icoColor, $icoBg] = nv_tx_icon($tx['type']);
-        $credit = in_array($tx['type'], ['return','deposit','referral_commission','adjustment'], true);
+        $credit = in_array($tx['type'], ['return','principal','deposit','referral_commission','adjustment','transfer_received'], true);
       ?>
         <div class="wtx-card">
           <div class="tx-icon" style="background:<?= $icoBg ?>;flex-shrink:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="<?= $icoColor ?>" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><?= nv_icon($icoName) ?></svg></div>

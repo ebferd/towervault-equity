@@ -80,7 +80,7 @@ function stmtCustom(v){ document.getElementById('stmt-custom').style.display = v
       <thead><tr><th>Description</th><th>Reference</th><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
       <tbody>
       <?php foreach ($data as $tx):
-        $credit = in_array($tx['type'],['return','deposit','referral_commission','adjustment']);
+        $credit = in_array($tx['type'],['return','principal','deposit','referral_commission','adjustment','transfer_received']);
       ?>
         <tr>
           <td style="font-weight:500"><?= htmlspecialchars($tx['description']??ucfirst(str_replace('_',' ',$tx['type']))) ?></td>
@@ -96,7 +96,7 @@ function stmtCustom(v){ document.getElementById('stmt-custom').style.display = v
   <!-- Mobile cards -->
   <div class="tx-cards">
     <?php foreach ($data as $tx):
-      $credit = in_array($tx['type'],['return','deposit','referral_commission','adjustment']);
+      $credit = in_array($tx['type'],['return','principal','deposit','referral_commission','adjustment','transfer_received']);
     ?>
     <div class="tx-card">
       <div class="tx-card-top">

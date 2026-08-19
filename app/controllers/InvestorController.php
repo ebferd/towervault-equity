@@ -1923,7 +1923,7 @@ HTML;
             $ref = generate_reference('TRM');
             DB::query(
                 "INSERT INTO transactions (user_id,type,amount,balance_before,balance_after,status,reference,description)
-                 VALUES (?,'withdrawal',?,?,?,'completed',?,?)",
+                 VALUES (?,'principal',?,?,?,'completed',?,?)",
                 [$uid, $payout, $balBefore, $balAfter, $ref,
                  'Early termination — ' . $holding['inv_name'] . ' (principal returned)']
             );

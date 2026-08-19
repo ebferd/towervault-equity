@@ -352,7 +352,7 @@ CREATE TABLE `fund_holdings` (
 CREATE TABLE `transactions` (
   `id`             INT UNSIGNED    NOT NULL AUTO_INCREMENT,
   `user_id`        INT UNSIGNED    NOT NULL,
-  `type`           ENUM('deposit','withdrawal','investment','return','referral_commission','adjustment','debit','transfer_sent','transfer_received') NOT NULL,
+  `type`           ENUM('deposit','withdrawal','investment','return','referral_commission','adjustment','debit','transfer_sent','transfer_received','principal') NOT NULL,
   `amount`         DECIMAL(15,2)   NOT NULL,
   `balance_before` DECIMAL(15,2)   NOT NULL,
   `balance_after`  DECIMAL(15,2)   NOT NULL,

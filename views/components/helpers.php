@@ -143,6 +143,7 @@ function nv_tx_icon(string $type): array {
         'deposit'             => ['deposit', 'var(--em-600)', 'var(--em-50)'],
         'investment'          => ['invest', 'var(--blue-600)', 'var(--blue-50)'],
         'return'              => ['return', 'var(--em-600)', 'var(--em-50)'],
+        'principal'           => ['deposit', 'var(--em-600)', 'var(--em-50)'],
         'referral_commission' => ['gift', 'var(--em-600)', 'var(--em-50)'],
         'withdrawal'          => ['withdraw', 'var(--mist-600)', 'var(--mist-100)'],
         default               => ['swap', 'var(--mist-600)', 'var(--mist-100)'],

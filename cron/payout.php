@@ -112,7 +112,7 @@ foreach ($maturingHoldings as $mh) {
         DB::query(
             "INSERT INTO transactions (user_id, type, amount, balance_before, balance_after, status, reference, description, holding_id)
              VALUES (?,?,?,?,?,'completed',?,?,?)",
-            [$mh['user_id'], 'return', $principal, $balBefore, $balAfter, $ref,
+            [$mh['user_id'], 'principal', $principal, $balBefore, $balAfter, $ref,
              'Principal returned — ' . $mh['investment_name'], $mh['id']]
         );
         create_notification($mh['user_id'], 'investment', 'Investment Matured',
