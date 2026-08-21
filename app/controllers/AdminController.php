@@ -1394,7 +1394,10 @@ class AdminController {
     public static function marketing(): void {
         AuthMiddleware::admin();
         $investments = DB::fetchAll("SELECT id, name, type, roi, status FROM investments ORDER BY is_featured DESC, id DESC");
-        $recent      = DB::fetchAll("SELECT * FROM marketing_campaigns ORDER BY id DESC LIMIT 8");
+        $recent      = DB::fetchAll(
+            "SELECT c.*, (SELECT COUNT(*) FROM marketing_recipients r WHERE r.campaign_id=c.id AND r.opened_at IS NOT NULL) AS opened_count
+             FROM marketing_campaigns c ORDER BY c.id DESC LIMIT 8"
+        );
         $unsubCount  = (int) ((DB::fetch("SELECT COUNT(*) c FROM marketing_unsubscribes") ?? [])['c'] ?? 0);
         $adminEmail  = platform_setting('admin_notification_email', platform_setting('smtp_user', ''));
         view('admin.marketing', compact('investments','recent','unsubCount','adminEmail'), 'admin');
@@ -1457,17 +1460,23 @@ class AdminController {
         @set_time_limit(0);
         @ignore_user_abort(true);
 
-        $sent = 0; $failed = 0; $total = count($eligible);
+        // Create the campaign row first so each recipient can be linked for open-tracking.
+        $total = count($eligible);
+        $campaignId = (int) DB::insert(
+            "INSERT INTO marketing_campaigns (subject, headline, body, featured_ids, cta_label, recipient_count, sent_count, failed_count, sent_by)
+             VALUES (?,?,?,?,?,?,0,0,?)",
+            [$subject, $headline ?: null, $body, ($featIds ? implode(',', $featIds) : null), $ctaLabel ?: null, $total, $adminId]
+        );
+
+        $sent = 0; $failed = 0;
         foreach ($eligible as $i => $e) {
-            if (Mailer::sendMarketing($e, $subject, $body, $headline, $invs, $ctaLabel)) $sent++; else $failed++;
+            // Unique per-recipient token embedded in the tracking pixel.
+            $token = bin2hex(random_bytes(16));
+            DB::query("INSERT INTO marketing_recipients (campaign_id, email, token) VALUES (?,?,?)", [$campaignId, $e, $token]);
+            if (Mailer::sendMarketing($e, $subject, $body, $headline, $invs, $ctaLabel, $token)) $sent++; else $failed++;
             if ($i < $total - 1) usleep(400000); // ~0.4s between sends
         }
-
-        DB::query(
-            "INSERT INTO marketing_campaigns (subject, headline, body, featured_ids, cta_label, recipient_count, sent_count, failed_count, sent_by)
-             VALUES (?,?,?,?,?,?,?,?,?)",
-            [$subject, $headline ?: null, $body, ($featIds ? implode(',', $featIds) : null), $ctaLabel ?: null, $total, $sent, $failed, $adminId]
-        );
+        DB::execute("UPDATE marketing_campaigns SET sent_count=?, failed_count=? WHERE id=?", [$sent, $failed, $campaignId]);
         audit_log($adminId, 'marketing_sent', "Marketing campaign '{$subject}' sent to {$sent} recipient(s)" . ($skipped ? ", {$skipped} suppressed" : '') . (count($remaining) ? ', ' . count($remaining) . ' held for next batch' : ''), 'medium', 'platform', null, 'Marketing');
 
         $msg = "Sent to {$sent} recipient(s).";

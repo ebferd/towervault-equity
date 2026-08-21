@@ -87,6 +87,7 @@ Router::post('/logout',                  [AuthController::class, 'logout']);
 Router::get('/terms',                    [InvestorController::class, 'terms']);
 Router::get('/privacy',                  [InvestorController::class, 'privacy']);
 Router::get('/unsubscribe',              [InvestorController::class, 'unsubscribe']);
+Router::get('/e/open',                   [InvestorController::class, 'emailOpen']);
 
 // ── Investor (Authenticated) ──────────────────────────────────
 Router::get('/investor/dashboard',       [InvestorController::class, 'dashboard']);

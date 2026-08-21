@@ -104,14 +104,18 @@
   <div class="section-body" style="padding:0">
     <table class="tbl" style="width:100%;border-collapse:collapse">
       <thead><tr>
-        <th style="text-align:left">Subject</th><th>Recipients</th><th>Sent</th><th>Failed</th><th style="text-align:right">Date</th>
+        <th style="text-align:left">Subject</th><th>Recipients</th><th>Sent</th><th>Opened</th><th>Failed</th><th style="text-align:right">Date</th>
       </tr></thead>
       <tbody>
-        <?php foreach ($recent as $c): ?>
+        <?php foreach ($recent as $c):
+          $sent = (int)$c['sent_count']; $opened = (int)($c['opened_count'] ?? 0);
+          $rate = $sent > 0 ? round($opened / $sent * 100) : 0;
+        ?>
           <tr>
             <td style="text-align:left"><?= htmlspecialchars($c['subject']) ?></td>
             <td style="text-align:center"><?= (int)$c['recipient_count'] ?></td>
-            <td style="text-align:center;color:#0f7a4a;font-weight:600"><?= (int)$c['sent_count'] ?></td>
+            <td style="text-align:center;color:#0f7a4a;font-weight:600"><?= $sent ?></td>
+            <td style="text-align:center;font-weight:600;color:<?= $opened ? '#1E3A5F' : '#9CA3AF' ?>"><?= $opened ?><?= $sent ? ' <span style="font-weight:400;color:#9CA3AF">('.$rate.'%)</span>' : '' ?></td>
             <td style="text-align:center;color:<?= (int)$c['failed_count'] ? '#C0392B' : '#9CA3AF' ?>"><?= (int)$c['failed_count'] ?></td>
             <td style="text-align:right;color:#9CA3AF"><?= date('M j, Y g:i A', strtotime($c['created_at'])) ?></td>
           </tr>

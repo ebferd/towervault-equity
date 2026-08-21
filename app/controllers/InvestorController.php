@@ -1270,6 +1270,31 @@ class InvestorController {
         view('public.legal', ['title' => 'Unsubscribe', 'heading' => $heading, 'content' => $content, 'platform_name' => $name], '');
     }
 
+    // ── Marketing open-tracking pixel (public, no auth) ────────
+    public static function emailOpen(): void {
+        $token = (string) ($_GET['t'] ?? '');
+        if (preg_match('/^[0-9a-f]{32}$/', $token)) {
+            // Record the open (first open sets opened_at; every open bumps the counter).
+            try {
+                DB::execute(
+                    "UPDATE marketing_recipients
+                        SET open_count = open_count + 1,
+                            last_opened_at = NOW(),
+                            opened_at = COALESCE(opened_at, NOW())
+                      WHERE token = ?",
+                    [$token]
+                );
+            } catch (\Throwable $e) { /* never let tracking break the pixel */ }
+        }
+        // Always return a 1x1 transparent GIF, uncached.
+        header('Content-Type: image/gif');
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
+        header('Content-Length: 43');
+        echo base64_decode('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
+        exit;
+    }
+
     // ── Profile ────────────────────────────────────────────────
     public static function profile(): void {
         AuthMiddleware::investor();

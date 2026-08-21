@@ -1286,7 +1286,7 @@ HTML;
      * @param array  $invs      zero or more investments rows — each renders a dashboard-style card
      * @param string $ctaLabel optional CTA button label (link is always the known registration path)
      */
-    public static function sendMarketing(string $email, string $subject, string $body, string $headline = '', array $invs = [], string $ctaLabel = ''): bool {
+    public static function sendMarketing(string $email, string $subject, string $body, string $headline = '', array $invs = [], string $ctaLabel = '', string $trackToken = ''): bool {
         $pUrl = rtrim(platform_setting('platform_website', 'https://nexvest.com'), '/');
 
         $content = '';
@@ -1308,6 +1308,12 @@ HTML;
         $content .= "<table width='100%' cellpadding='0' cellspacing='0' style='margin:34px 0 6px'><tr><td align='center'>"
                   . "<a href='{$site}' class='m-btn2' style='display:inline-block;background:#1F3A5F;color:#ffffff;font-size:14.5px;font-weight:600;text-decoration:none;padding:14px 34px;border-radius:8px'>{$label} &rarr;</a>"
                   . "</td></tr></table>";
+
+        // Open-tracking pixel — loads a 1x1 image from our endpoint when the email is opened.
+        if ($trackToken !== '') {
+            $px = htmlspecialchars($pUrl . '/e/open?t=' . $trackToken, ENT_QUOTES);
+            $content .= "<img src='{$px}' width='1' height='1' alt='' style='display:block;width:1px;height:1px;max-height:1px;border:0;opacity:0;overflow:hidden'/>";
+        }
 
         $pre = trim($headline) !== '' ? $headline : mb_substr(trim($body), 0, 90);
         return self::send($email, '', $subject, self::marketingWrap($content, $pre, self::unsubUrl($email)));
