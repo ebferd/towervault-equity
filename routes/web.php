@@ -175,6 +175,7 @@ Router::get('/admin/settings',           [AdminController::class, 'settings']);
 Router::post('/admin/settings',          [AdminController::class, 'saveSettings']);
 Router::post('/admin/announce',          [AdminController::class, 'sendAnnouncement']);
 Router::get('/admin/marketing',          [AdminController::class, 'marketing']);
+Router::get('/admin/marketing/campaign/{id}', [AdminController::class, 'marketingCampaign']);
 Router::post('/admin/marketing/test',    [AdminController::class, 'marketingTest']);
 Router::post('/admin/marketing/send',    [AdminController::class, 'marketingSend']);
 Router::post('/admin/marketing/senders/add',    [AdminController::class, 'addMarketingSender']);

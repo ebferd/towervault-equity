@@ -1474,6 +1474,25 @@ class AdminController {
         json_response(['success' => true, 'message' => 'Sender removed.']);
     }
 
+    /** Per-campaign detail: who opened, who didn't. */
+    public static function marketingCampaign(): void {
+        AuthMiddleware::admin();
+        $id = (int) ($_GET['id'] ?? 0);
+        $campaign = DB::fetch("SELECT * FROM marketing_campaigns WHERE id=?", [$id]);
+        if (!$campaign) { http_response_code(404); view('errors.404', ['title' => 'Not found'], 'admin'); return; }
+
+        $recipients = DB::fetchAll(
+            "SELECT email, sent_at, opened_at, last_opened_at, open_count
+               FROM marketing_recipients WHERE campaign_id=?
+              ORDER BY (opened_at IS NOT NULL) DESC, opened_at DESC, email ASC",
+            [$id]
+        );
+        $openedCount = 0;
+        foreach ($recipients as $r) if ($r['opened_at'] !== null) $openedCount++;
+
+        view('admin.marketing_campaign', compact('campaign','recipients','openedCount'), 'admin');
+    }
+
     /** Send one preview copy to the admin's own address. */
     public static function marketingTest(): void {
         AuthMiddleware::admin();

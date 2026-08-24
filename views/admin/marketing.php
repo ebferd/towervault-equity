@@ -142,7 +142,7 @@
           $rate = $sent > 0 ? round($opened / $sent * 100) : 0;
         ?>
           <tr>
-            <td style="text-align:left"><?= htmlspecialchars($c['subject']) ?></td>
+            <td style="text-align:left"><a href="/admin/marketing/campaign/<?= (int)$c['id'] ?>" style="color:#1E3A5F;font-weight:600;text-decoration:none"><?= htmlspecialchars($c['subject']) ?></a></td>
             <td style="text-align:center"><?= (int)$c['recipient_count'] ?></td>
             <td style="text-align:center;color:#0f7a4a;font-weight:600"><?= $sent ?></td>
             <td style="text-align:center;font-weight:600;color:<?= $opened ? '#1E3A5F' : '#9CA3AF' ?>"><?= $opened ?><?= $sent ? ' <span style="font-weight:400;color:#9CA3AF">('.$rate.'%)</span>' : '' ?></td>
