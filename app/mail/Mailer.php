@@ -29,7 +29,9 @@ class Mailer {
     }
 
     // ── Base send method ──────────────────────────────────────
-    private static function send(string $toEmail, string $toName, string $subject, string $htmlBody): bool {
+    // $from (optional) overrides the sender: ['email'=>..., 'name'=>...].
+    // Used by marketing so a campaign can appear from a chosen team member.
+    private static function send(string $toEmail, string $toName, string $subject, string $htmlBody, ?array $from = null): bool {
         // Guard: PHPMailer not installed (vendor/ missing on this host) — never fatal, just skip.
         if (!class_exists(PHPMailer::class)) {
             error_log("Mailer error [{$toEmail}]: PHPMailer library not found (composer dependencies missing).");
@@ -57,10 +59,24 @@ class Mailer {
             $mail->SMTPKeepAlive = false;
 
             $fromEmail = $cfg['from_email'] ?: $cfg['user'];
-            $mail->setFrom($fromEmail, $cfg['from_name']);
+            $fromName  = $cfg['from_name'];
+            $replyTo   = $cfg['support'] ?: '';
+            $replyName = $cfg['from_name'];
+            // Chosen sender (marketing): override From + Reply-To so replies reach them.
+            if ($from && !empty($from['email']) && filter_var($from['email'], FILTER_VALIDATE_EMAIL)) {
+                $fromName  = $from['name'] ?: $fromName;
+                $replyTo   = $from['email'];
+                $replyName = $from['name'] ?: $from['email'];
+                // Only override the envelope From when the address is on the same domain we
+                // authenticate for — otherwise SPF/DKIM break and it lands in spam.
+                if (self::sameMailDomain($from['email'], $fromEmail)) {
+                    $fromEmail = $from['email'];
+                }
+            }
+            $mail->setFrom($fromEmail, $fromName);
             $mail->addAddress($toEmail, $toName);
-            if (!empty($cfg['support'])) {
-                $mail->addReplyTo($cfg['support'], $cfg['from_name']);
+            if ($replyTo !== '') {
+                $mail->addReplyTo($replyTo, $replyName);
             }
 
             $mail->isHTML(true);
@@ -77,6 +93,12 @@ class Mailer {
             error_log("Mailer error [{$toEmail}]: " . $e->getMessage());
             return false;
         }
+    }
+
+    private static function sameMailDomain(string $a, string $b): bool {
+        $da = strtolower(substr(strrchr($a, '@') ?: '', 1));
+        $db = strtolower(substr(strrchr($b, '@') ?: '', 1));
+        return $da !== '' && $da === $db;
     }
 
     // ── Public raw send (for admin use: SMTP test, direct email) ─
@@ -1286,7 +1308,7 @@ HTML;
      * @param array  $invs      zero or more investments rows — each renders a dashboard-style card
      * @param string $ctaLabel optional CTA button label (link is always the known registration path)
      */
-    public static function sendMarketing(string $email, string $subject, string $body, string $headline = '', array $invs = [], string $ctaLabel = '', string $trackToken = ''): bool {
+    public static function sendMarketing(string $email, string $subject, string $body, string $headline = '', array $invs = [], string $ctaLabel = '', string $trackToken = '', ?array $from = null): bool {
         $pUrl = rtrim(platform_setting('platform_website', 'https://nexvest.com'), '/');
 
         $content = '';
@@ -1316,6 +1338,6 @@ HTML;
         }
 
         $pre = trim($headline) !== '' ? $headline : mb_substr(trim($body), 0, 90);
-        return self::send($email, '', $subject, self::marketingWrap($content, $pre, self::unsubUrl($email)));
+        return self::send($email, '', $subject, self::marketingWrap($content, $pre, self::unsubUrl($email)), $from);
     }
 }

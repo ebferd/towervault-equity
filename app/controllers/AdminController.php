@@ -1391,6 +1391,40 @@ class AdminController {
         return $ordered;
     }
 
+    /** The domain campaigns may send "from" — the platform's own domain (SPF/DKIM aligned). */
+    private static function marketingDomain(): string {
+        $base = platform_setting('platform_email', '') ?: platform_setting('smtp_user', '') ?: platform_setting('platform_website', '');
+        $host = str_contains($base, '@') ? substr(strrchr($base, '@'), 1) : (parse_url($base, PHP_URL_HOST) ?: $base);
+        $host = strtolower(preg_replace('#^www\.#', '', (string) $host));
+        $labels = explode('.', $host);
+        return count($labels) > 2 ? implode('.', array_slice($labels, -2)) : $host; // apex
+    }
+
+    /** Saved marketing senders (custom "from" identities), plus the default platform sender. */
+    private static function marketingSenders(): array {
+        $default = [
+            'email'   => platform_setting('platform_email', platform_setting('smtp_user', '')),
+            'name'    => platform_setting('smtp_from_name', platform_setting('platform_name', 'NexVest')),
+            'default' => true,
+        ];
+        $saved = json_decode((string) platform_setting('marketing_senders', '[]'), true) ?: [];
+        $out = [$default];
+        foreach ($saved as $s) {
+            if (!empty($s['email'])) $out[] = ['email' => $s['email'], 'name' => $s['name'] ?? '', 'default' => false];
+        }
+        return $out;
+    }
+
+    /** Resolve a chosen sender email to a ['email','name'] pair from the allowed list. */
+    private static function resolveSender(string $email): ?array {
+        $email = strtolower(trim($email));
+        if ($email === '') return null;
+        foreach (self::marketingSenders() as $s) {
+            if (strtolower($s['email']) === $email) return ['email' => $s['email'], 'name' => $s['name']];
+        }
+        return null;
+    }
+
     public static function marketing(): void {
         AuthMiddleware::admin();
         $investments = DB::fetchAll("SELECT id, name, type, roi, status FROM investments ORDER BY is_featured DESC, id DESC");
@@ -1400,7 +1434,44 @@ class AdminController {
         );
         $unsubCount  = (int) ((DB::fetch("SELECT COUNT(*) c FROM marketing_unsubscribes") ?? [])['c'] ?? 0);
         $adminEmail  = platform_setting('admin_notification_email', platform_setting('smtp_user', ''));
-        view('admin.marketing', compact('investments','recent','unsubCount','adminEmail'), 'admin');
+        $senders     = self::marketingSenders();
+        $senderDomain= self::marketingDomain();
+        view('admin.marketing', compact('investments','recent','unsubCount','adminEmail','senders','senderDomain'), 'admin');
+    }
+
+    /** Add a custom sender identity (name + on-domain email). */
+    public static function addMarketingSender(): void {
+        AuthMiddleware::admin();
+        AuthMiddleware::verifyCsrf();
+        $name  = sanitize(input('name', ''));
+        $email = strtolower(trim((string) input('email', '')));
+        if (!$name || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            json_response(['success' => false, 'error' => 'Enter a valid name and email address.']);
+        }
+        $domain = substr(strrchr($email, '@'), 1);
+        $allowed = self::marketingDomain();
+        if (strtolower($domain) !== strtolower($allowed) && !str_ends_with(strtolower($domain), '.' . strtolower($allowed))) {
+            json_response(['success' => false, 'error' => "Sender must use your own domain (@{$allowed}) so emails don't land in spam."]);
+        }
+        $saved = json_decode((string) platform_setting('marketing_senders', '[]'), true) ?: [];
+        foreach ($saved as $s) if (strtolower($s['email'] ?? '') === $email) json_response(['success' => false, 'error' => 'That sender already exists.']);
+        $saved[] = ['name' => $name, 'email' => $email];
+        DB::query("INSERT INTO platform_settings (setting_key, setting_value, setting_group) VALUES ('marketing_senders', ?, 'email')
+                   ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)", [json_encode(array_values($saved))]);
+        audit_log(current_admin_id(), 'marketing_sender_added', "Added marketing sender {$name} <{$email}>", 'low', 'platform', null, 'Marketing');
+        json_response(['success' => true, 'message' => 'Sender added.']);
+    }
+
+    /** Remove a custom sender identity. */
+    public static function deleteMarketingSender(): void {
+        AuthMiddleware::admin();
+        AuthMiddleware::verifyCsrf();
+        $email = strtolower(trim((string) input('email', '')));
+        $saved = json_decode((string) platform_setting('marketing_senders', '[]'), true) ?: [];
+        $saved = array_values(array_filter($saved, fn($s) => strtolower($s['email'] ?? '') !== $email));
+        DB::query("INSERT INTO platform_settings (setting_key, setting_value, setting_group) VALUES ('marketing_senders', ?, 'email')
+                   ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)", [json_encode($saved)]);
+        json_response(['success' => true, 'message' => 'Sender removed.']);
     }
 
     /** Send one preview copy to the admin's own address. */
@@ -1414,10 +1485,12 @@ class AdminController {
         $ctaLabel = sanitize(input('cta_label', ''));
         $invs     = self::marketingInvestments(self::marketingIds(input('featured_ids', [])));
 
+        $from     = self::resolveSender((string) input('sender_email', ''));
+
         if (!$to || !filter_var($to, FILTER_VALIDATE_EMAIL)) json_response(['success' => false, 'error' => 'Enter a valid test email address.']);
         if (!$subject || !$body) json_response(['success' => false, 'error' => 'Subject and message body are required.']);
 
-        $ok = Mailer::sendMarketing($to, '[TEST] ' . $subject, $body, $headline, $invs, $ctaLabel);
+        $ok = Mailer::sendMarketing($to, '[TEST] ' . $subject, $body, $headline, $invs, $ctaLabel, '', $from);
         json_response($ok
             ? ['success' => true,  'message' => "Test sent to {$to}. Check your inbox."]
             : ['success' => false, 'error' => 'Failed to send. Check SMTP settings and the server error log.']);
@@ -1435,6 +1508,7 @@ class AdminController {
         $batch    = max(0, (int) input('batch_size', 0));   // 0 = send to everyone this run
         $featIds  = self::marketingIds(input('featured_ids', []));
         $invs     = self::marketingInvestments($featIds);
+        $from     = self::resolveSender((string) input('sender_email', ''));
         $emails   = self::parseRecipients((string) input('recipients', ''));
 
         if (!$subject || !$body) json_response(['success' => false, 'error' => 'Subject and message body are required.']);
@@ -1473,7 +1547,7 @@ class AdminController {
             // Unique per-recipient token embedded in the tracking pixel.
             $token = bin2hex(random_bytes(16));
             DB::query("INSERT INTO marketing_recipients (campaign_id, email, token) VALUES (?,?,?)", [$campaignId, $e, $token]);
-            if (Mailer::sendMarketing($e, $subject, $body, $headline, $invs, $ctaLabel, $token)) $sent++; else $failed++;
+            if (Mailer::sendMarketing($e, $subject, $body, $headline, $invs, $ctaLabel, $token, $from)) $sent++; else $failed++;
             if ($i < $total - 1) usleep(400000); // ~0.4s between sends
         }
         DB::execute("UPDATE marketing_campaigns SET sent_count=?, failed_count=? WHERE id=?", [$sent, $failed, $campaignId]);

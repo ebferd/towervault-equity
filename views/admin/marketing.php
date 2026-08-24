@@ -29,6 +29,36 @@
     </div>
 
     <div class="section" style="margin-top:1.25rem">
+      <div class="section-head"><span class="section-title">Sender</span><span class="section-meta">Who the email appears to come from — replies go to them</span></div>
+      <div class="section-body">
+        <div class="fg">
+          <label class="fl">From</label>
+          <select class="fi" id="mk-sender">
+            <?php foreach ($senders as $s): ?>
+              <option value="<?= htmlspecialchars($s['email']) ?>">
+                <?= htmlspecialchars(($s['name'] ? $s['name'].' ' : '').'<'.$s['email'].'>') ?><?= !empty($s['default']) ? ' — default' : '' ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div id="mk-senders-list" style="display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.2rem">
+          <?php foreach ($senders as $s): if (!empty($s['default'])) continue; ?>
+            <span class="mk-chip" data-email="<?= htmlspecialchars($s['email']) ?>">
+              <?= htmlspecialchars(($s['name']?$s['name'].' ':'').$s['email']) ?>
+              <button type="button" class="mk-chip-x" title="Remove" onclick="mkDelSender('<?= htmlspecialchars($s['email'],ENT_QUOTES) ?>')">&times;</button>
+            </span>
+          <?php endforeach; ?>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:.5rem;align-items:end;margin-top:.9rem">
+          <div class="fg" style="margin:0"><label class="fl">Add sender — name</label><input class="fi" id="mk-new-name" placeholder="Paige Russel"/></div>
+          <div class="fg" style="margin:0"><label class="fl">Email <span class="fl-opt">(@<?= htmlspecialchars($senderDomain) ?>)</span></label><input class="fi" id="mk-new-email" placeholder="paige@<?= htmlspecialchars($senderDomain) ?>"/></div>
+          <button type="button" class="btn btn-ghost" id="mk-add-sender" style="height:40px">Add</button>
+        </div>
+        <p class="fl-opt" style="margin-top:.5rem">Senders must use your own domain (<b>@<?= htmlspecialchars($senderDomain) ?></b>) so messages stay out of spam.</p>
+      </div>
+    </div>
+
+    <div class="section" style="margin-top:1.25rem">
       <div class="section-head"><span class="section-title">Featured opportunities</span><span class="section-meta">Tick any you want to showcase — each renders a live card that matches the dashboard</span></div>
       <div class="section-body">
         <?php if (empty($investments)): ?>
@@ -142,6 +172,9 @@
   .mk-opp-body{display:flex;flex-direction:column;gap:2px;min-width:0}
   .mk-opp-name{font-size:13.5px;font-weight:600;color:#111827;line-height:1.3}
   .mk-opp-meta{font-size:11.5px;color:#9CA3AF}
+  .mk-chip{display:inline-flex;align-items:center;gap:.4rem;background:#F5F8FC;border:1px solid #DCE3EE;color:#1E3A5F;font-size:12px;font-weight:600;border-radius:99px;padding:4px 6px 4px 12px}
+  .mk-chip-x{background:none;border:none;color:#8A93A6;font-size:16px;line-height:1;cursor:pointer;padding:0 4px}
+  .mk-chip-x:hover{color:#C0392B}
   @media(max-width:900px){.mk-grid{grid-template-columns:1fr}.mk-sticky{position:static}.mk-opps{grid-template-columns:1fr}}
 </style>
 
@@ -167,7 +200,24 @@ function payload(){
     body:      $('mk-body').value.trim(),
     featured_ids: ids,
     cta_label: $('mk-cta-label').value.trim(),
+    sender_email: $('mk-sender').value,
   };
+}
+
+// ── Sender management ─────────────────────────────────────────
+$('mk-add-sender').addEventListener('click', async function(){
+  const name = $('mk-new-name').value.trim(), email = $('mk-new-email').value.trim();
+  if(!name || !email){ $('mk-alert').innerHTML = '<div class="alert alert-err">Enter a name and email for the sender.</div>'; window.scrollTo({top:0,behavior:'smooth'}); return; }
+  setLoading(this, true, 'Adding…');
+  const data = await post('/admin/marketing/senders/add', { name, email });
+  setLoading(this, false);
+  if(data.success){ location.reload(); }
+  else { $('mk-alert').innerHTML = '<div class="alert alert-err">' + (data.error || 'Could not add sender.') + '</div>'; window.scrollTo({top:0,behavior:'smooth'}); }
+});
+async function mkDelSender(email){
+  if(!confirm('Remove this sender?')) return;
+  const data = await post('/admin/marketing/senders/delete', { email });
+  if(data.success) location.reload();
 }
 function validate(){
   if(!$('mk-subject').value.trim() || !$('mk-body').value.trim()){
