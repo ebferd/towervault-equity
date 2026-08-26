@@ -247,6 +247,19 @@
         <div class="fg"><label class="fl">SWIFT / BIC Code</label><input class="fi" name="wire_swift" value="<?= htmlspecialchars($payments['wire_swift']??'') ?>"/></div>
         <div class="fg"><label class="fl">Bank Country</label><input class="fi" name="wire_bank_country" value="<?= htmlspecialchars($payments['wire_bank_country']??'') ?>"/></div>
       </div>
+
+      <!-- Additional bank accounts (for other currencies / on request) -->
+      <div style="border-top:1px solid var(--border);margin-top:1.25rem;padding-top:1.1rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.4rem">
+          <div>
+            <div style="font-size:13px;font-weight:600">Additional bank accounts</div>
+            <div style="font-size:11.5px;color:var(--text3)">Add another account when an investor requests one (e.g. a different currency). Shown beneath the main account on the wire screen.</div>
+          </div>
+          <button type="button" class="btn btn-outline btn-sm" id="wx-add"><?= svgIcon('file',12) ?>Add account</button>
+        </div>
+        <input type="hidden" name="wire_extra_accounts" id="wx-json" value='<?= htmlspecialchars($payments['wire_extra_accounts'] ?? "[]", ENT_QUOTES) ?>'/>
+        <div id="wx-list"></div>
+      </div>
     </div>
   </div>
 
@@ -356,6 +369,42 @@ _smartsupp.key = 'YOUR_KEY_HERE';
   const setAll = c => sections.forEach(s => s.classList.toggle('collapsed', c));
   document.getElementById('acc-expand')?.addEventListener('click', () => setAll(false));
   document.getElementById('acc-collapse')?.addEventListener('click', () => setAll(true));
+})();
+
+// ── Additional bank accounts (repeatable list) ────────────────
+(function(){
+  const listEl = document.getElementById('wx-list');
+  const jsonEl = document.getElementById('wx-json');
+  if (!listEl || !jsonEl) return;
+  const FIELDS = [['label','Label / currency (e.g. EUR account)'],['bank','Bank name'],['holder','Account holder name'],['number','Account number / IBAN'],['routing','Routing number'],['swift','SWIFT / BIC'],['country','Bank country']];
+  let accounts = [];
+  try { const p = JSON.parse(jsonEl.value || '[]'); if (Array.isArray(p)) accounts = p; } catch(e){}
+
+  const esc = s => String(s==null?'':s).replace(/"/g,'&quot;');
+  function sync(){ jsonEl.value = JSON.stringify(accounts); }
+  function render(){
+    listEl.innerHTML = accounts.map((a,i) => `
+      <div style="border:1px solid var(--border);border-radius:var(--r);padding:.9rem 1rem;margin-bottom:.75rem;position:relative">
+        <button type="button" class="wx-del" data-i="${i}" title="Remove" style="position:absolute;top:.6rem;right:.6rem;background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;line-height:1">&times;</button>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem">
+          ${FIELDS.map(([k,ph]) => `<div class="fg" style="margin:0"><label class="fl">${ph}</label><input class="fi wx-f" data-i="${i}" data-k="${k}" value="${esc(a[k])}" placeholder="${ph}"/></div>`).join('')}
+        </div>
+      </div>`).join('');
+  }
+  listEl.addEventListener('input', e => {
+    const el = e.target.closest('.wx-f'); if (!el) return;
+    accounts[+el.dataset.i][el.dataset.k] = el.value; sync();
+  });
+  listEl.addEventListener('click', e => {
+    const del = e.target.closest('.wx-del'); if (!del) return;
+    accounts.splice(+del.dataset.i, 1); render(); sync();
+  });
+  document.getElementById('wx-add').addEventListener('click', () => {
+    accounts.push({label:'',bank:'',holder:'',number:'',routing:'',swift:'',country:''}); render(); sync();
+  });
+  const form = document.getElementById('settings-form');
+  if (form) form.addEventListener('submit', sync, true); // ensure latest before FormData
+  render(); sync();
 })();
 
 document.getElementById('smtp-test-btn').addEventListener('click', async function() {

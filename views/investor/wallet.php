@@ -519,7 +519,17 @@ async function startDeposit() {
     </div><div class="alert-banner" style="background:var(--amber-50);border:1px solid var(--amber-100);color:var(--amber-700)">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
       <span>Include the reference code in the wire transfer description. Allow 3&ndash;5 business days.</span>
-    </div>
+    </div>`;
+    const extraAccts = <?= json_encode(wire_extra_accounts()) ?>;
+    if (extraAccts.length) {
+      const fmap = [['bank','Bank Name'],['holder','Account Name'],['number','Account Number'],['routing','Routing Number'],['swift','SWIFT / BIC'],['country','Bank Country']];
+      details += `<div style="margin-top:1rem;padding-top:.85rem;border-top:1px solid var(--border)"><div style="font-size:12px;font-weight:600;color:var(--mist-600);margin-bottom:.5rem">Other bank accounts</div>` +
+        extraAccts.map(a => `<div style="margin-bottom:.9rem">
+          ${a.label ? `<div style="font-size:12px;font-weight:600;color:var(--mist-800);margin-bottom:.35rem">${a.label}</div>` : ''}
+          ${fmap.filter(([k]) => a[k]).map(([k,lbl]) => `<div class="wire-row"><span>${lbl}</span><span class="wire-v">${a[k]} <button type="button" class="wire-copy" data-copy="${a[k]}" title="Copy ${lbl}" aria-label="Copy ${lbl}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></span></div>`).join('')}
+        </div>`).join('') + `</div>`;
+    }
+    details += `
     <div style="margin-top:.85rem;padding-top:.85rem;border-top:1px solid var(--border)">
       <button type="button" class="qbtn outline" style="width:100%;height:40px;font-size:13px" onclick="document.getElementById('wire-req-modal').classList.add('show')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>

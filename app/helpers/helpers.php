@@ -421,6 +421,33 @@ function calc_total_return(float $amount, float $roiPercent): float {
 }
 
 /**
+ * Extra wire/bank accounts an admin has added (beyond the primary one),
+ * stored as a JSON list in the 'wire_extra_accounts' setting. Returns a
+ * clean array of accounts, skipping blank/invalid entries.
+ */
+function wire_extra_accounts(): array {
+    $raw = platform_setting('wire_extra_accounts', '');
+    if (trim($raw) === '') return [];
+    $arr = json_decode($raw, true);
+    if (!is_array($arr)) return [];
+    $out = [];
+    foreach ($arr as $a) {
+        if (!is_array($a)) continue;
+        $acc = [
+            'label'   => trim((string) ($a['label']   ?? '')),
+            'bank'    => trim((string) ($a['bank']    ?? '')),
+            'holder'  => trim((string) ($a['holder']  ?? '')),
+            'number'  => trim((string) ($a['number']  ?? '')),
+            'routing' => trim((string) ($a['routing'] ?? '')),
+            'swift'   => trim((string) ($a['swift']   ?? '')),
+            'country' => trim((string) ($a['country'] ?? '')),
+        ];
+        if ($acc['number'] !== '' || $acc['bank'] !== '') $out[] = $acc; // skip empty rows
+    }
+    return $out;
+}
+
+/**
  * The full ordered list of payout due-dates for a holding, anchored to its
  * start date (first payout one period after start, last on/before end_date).
  * 'at_maturity' yields a single date on end_date. Used by the payout cron to

@@ -399,6 +399,7 @@ const WIRE = <?= json_encode($wireDetails) ?>;
 const CRYPTO_ADDRS = <?= json_encode($cryptoAddrs) ?>;
 const ZELLE   = <?= json_encode($zelleInfo) ?>;
 const CASHAPP = <?= json_encode($cashappInfo) ?>;
+const WIRE_EXTRA = <?= json_encode(wire_extra_accounts()) ?>;
 
 let currentMethod = '';
 let currentCoin   = '';
@@ -534,11 +535,20 @@ function buildPaymentDetails(data) {
   } else if (currentMethod === 'wire') {
     const rows = Object.entries({...WIRE, 'Reference': depositRef})
       .map(([k,v]) => `<div class="wire-row"><span>${k}</span><span class="wire-v">${v||'—'}${v?` <button type="button" class="wire-copy" onclick="copyText('${String(v).replace(/'/g,"\\'")}',this)" title="Copy ${k}" aria-label="Copy ${k}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>`:''}</span></div>`).join('');
+    let extraHtml = '';
+    if (WIRE_EXTRA.length) {
+      const fmap = [['bank','Bank Name'],['holder','Account Name'],['number','Account Number'],['routing','Routing Number'],['swift','SWIFT / BIC'],['country','Bank Country']];
+      extraHtml = `<div style="font-size:11.5px;font-weight:600;color:var(--mist-600);margin:.4rem 0 .5rem">Other bank accounts</div>` +
+        WIRE_EXTRA.map(a => `<div class="pay-detail-box">
+          ${a.label ? `<div style="font-size:11.5px;font-weight:700;color:var(--mist-800);margin-bottom:.35rem">${a.label}</div>` : ''}
+          ${fmap.filter(([k]) => a[k]).map(([k,lbl]) => `<div class="wire-row"><span>${lbl}</span><span class="wire-v">${a[k]} <button type="button" class="wire-copy" onclick="copyText('${String(a[k]).replace(/'/g,"\\'")}',this)" title="Copy ${lbl}" aria-label="Copy ${lbl}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></span></div>`).join('')}
+        </div>`).join('');
+    }
     html = `<div class="pay-detail-box">${rows}</div>
     <div class="alert-banner" style="background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;margin-bottom:.65rem">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       Include the reference in your wire transfer description. Allow 3–5 business days.
-    </div>`;
+    </div>` + extraHtml;
   }
   document.getElementById('pay-details-content').innerHTML = html;
 }

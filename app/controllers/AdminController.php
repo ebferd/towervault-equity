@@ -1166,6 +1166,7 @@ class AdminController {
             'paypal_email','paypal_me_link',
             // Payments — wire
             'wire_bank_name','wire_account_name','wire_account_number','wire_routing','wire_swift','wire_bank_country',
+            'wire_extra_accounts',
             // Payments — Zelle & Cash App
             'zelle_recipient','zelle_name','cashapp_tag','cashapp_name',
             // Payments — misc
@@ -1203,6 +1204,7 @@ class AdminController {
             'crypto_btc_address' => 'payments', 'crypto_eth_address' => 'payments',
             'crypto_usdt_address' => 'payments', 'crypto_usdc_address' => 'payments',
             'paypal_email' => 'payments', 'paypal_me_link' => 'payments',
+            'wire_extra_accounts' => 'payments',
             'wire_bank_name' => 'payments', 'wire_account_name' => 'payments',
             'wire_account_number' => 'payments', 'wire_routing' => 'payments',
             'wire_swift' => 'payments', 'wire_bank_country' => 'payments',
@@ -1222,7 +1224,7 @@ class AdminController {
             'legal_terms' => 'legal', 'legal_privacy' => 'legal',
         ];
 
-        $rawKeys      = ['legal_terms', 'legal_privacy', 'smartsupp_code'];
+        $rawKeys      = ['legal_terms', 'legal_privacy', 'smartsupp_code', 'wire_extra_accounts'];
         $checkboxKeys = ['kyc_enabled','two_fa_enabled','registration_open','maintenance_mode','email_verification_enabled','payment_crypto','payment_paypal','payment_wire','payment_zelle','payment_cashapp','invoice_wallet_payment','withdraw_crypto','withdraw_paypal','withdraw_wire','withdraw_zelle','withdraw_cashapp'];
         foreach ($allowed as $key) {
             if (isset($_POST[$key])) {
