@@ -377,7 +377,7 @@ _smartsupp.key = 'YOUR_KEY_HERE';
   const listEl = document.getElementById('wx-list');
   const jsonEl = document.getElementById('wx-json');
   if (!listEl || !jsonEl) return;
-  const FIELDS = [['label','Label / currency (e.g. EUR account)'],['bank','Bank name'],['holder','Account holder name'],['number','Account number / IBAN'],['routing','Routing number'],['swift','SWIFT / BIC'],['country','Bank country']];
+  const FIELDS = [['label','Label / currency (e.g. EUR account)'],['symbol','Currency symbol (e.g. €)'],['bank','Bank name'],['holder','Account holder name'],['number','Account number / IBAN'],['type','Account type (e.g. Checking)'],['routing','Routing number'],['swift','SWIFT / BIC'],['address','Bank address'],['min','Minimum amount (optional)'],['max','Maximum amount (optional)']];
   let accounts = [];
   try { const p = JSON.parse(jsonEl.value || '[]'); if (Array.isArray(p)) accounts = p; } catch(e){}
 
@@ -401,7 +401,7 @@ _smartsupp.key = 'YOUR_KEY_HERE';
     accounts.splice(+del.dataset.i, 1); render(); sync();
   });
   document.getElementById('wx-add').addEventListener('click', () => {
-    accounts.push({label:'',bank:'',holder:'',number:'',routing:'',swift:'',country:''}); render(); sync();
+    accounts.push({label:'',symbol:'',bank:'',holder:'',number:'',type:'',routing:'',swift:'',address:'',min:'',max:''}); render(); sync();
   });
   const form = document.getElementById('settings-form');
   if (form) form.addEventListener('submit', sync, true); // ensure latest before FormData

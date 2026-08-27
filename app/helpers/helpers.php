@@ -440,12 +440,17 @@ function wire_extra_accounts(): array {
         if (!is_array($a)) continue;
         $acc = [
             'label'   => trim((string) ($a['label']   ?? '')),
+            'symbol'  => trim((string) ($a['symbol']  ?? '')),
             'bank'    => trim((string) ($a['bank']    ?? '')),
             'holder'  => trim((string) ($a['holder']  ?? '')),
             'number'  => trim((string) ($a['number']  ?? '')),
+            'type'    => trim((string) ($a['type']    ?? '')),
             'routing' => trim((string) ($a['routing'] ?? '')),
             'swift'   => trim((string) ($a['swift']   ?? '')),
+            'address' => trim((string) ($a['address'] ?? '')),
             'country' => trim((string) ($a['country'] ?? '')),
+            'min'     => trim((string) ($a['min']     ?? '')),
+            'max'     => trim((string) ($a['max']     ?? '')),
         ];
         if ($acc['number'] !== '' || $acc['bank'] !== '') $out[] = $acc; // skip empty rows
     }

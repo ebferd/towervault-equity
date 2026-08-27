@@ -532,11 +532,17 @@ async function startDeposit() {
     </div>`;
     const extraAccts = <?= json_encode(wire_extra_accounts()) ?>;
     if (extraAccts.length) {
-      const fmap = [['bank','Bank Name'],['holder','Account Name'],['number','Account Number'],['routing','Routing Number'],['swift','SWIFT / BIC'],['country','Bank Country']];
+      const fmap = [['bank','Bank Name'],['holder','Account Name'],['number','Account Number / IBAN'],['type','Account Type'],['routing','Routing Number'],['swift','SWIFT / BIC'],['address','Bank Address'],['country','Bank Country']];
+      const limits = a => {
+        if (!a.min && !a.max) return '';
+        const s = a.symbol || '';
+        const txt = a.min && a.max ? `${s}${a.min} – ${s}${a.max}` : (a.min ? `Min ${s}${a.min}` : `Max ${s}${a.max}`);
+        return `<div class="wire-row"><span>Limits</span><span class="wire-v">${txt}</span></div>`;
+      };
       details += `<div style="margin-top:1rem;padding-top:.85rem;border-top:1px solid var(--border)"><div style="font-size:12px;font-weight:600;color:var(--mist-600);margin-bottom:.5rem">Other bank accounts</div>` +
         extraAccts.map(a => `<div style="margin-bottom:.9rem">
           ${a.label ? `<div style="font-size:12px;font-weight:600;color:var(--mist-800);margin-bottom:.35rem">${a.label}</div>` : ''}
-          ${fmap.filter(([k]) => a[k]).map(([k,lbl]) => `<div class="wire-row"><span>${lbl}</span><span class="wire-v">${a[k]} <button type="button" class="wire-copy" data-copy="${a[k]}" title="Copy ${lbl}" aria-label="Copy ${lbl}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></span></div>`).join('')}
+          ${fmap.filter(([k]) => a[k]).map(([k,lbl]) => `<div class="wire-row"><span>${lbl}</span><span class="wire-v">${a[k]} <button type="button" class="wire-copy" data-copy="${a[k]}" title="Copy ${lbl}" aria-label="Copy ${lbl}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></span></div>`).join('') + limits(a)}
         </div>`).join('') + `</div>`;
     }
     details += `
