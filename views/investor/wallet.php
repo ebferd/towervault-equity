@@ -381,7 +381,13 @@ $minWithdraw   = (float) platform_setting('min_withdrawal', '50');
         <input type="hidden" name="_token" value="<?= csrf_token() ?>"/>
         <div class="fg">
           <label class="fl">Your Country</label>
-          <input class="fi" name="country" required placeholder="e.g. Germany, Nigeria, Canada" value="<?= htmlspecialchars($user['country'] ?? '') ?>"/>
+          <?php $userCountry = $user['country'] ?? ''; ?>
+          <select class="fi" name="country" required>
+            <option value="">Select your country…</option>
+            <?php foreach (country_list() as $c): ?>
+              <option value="<?= htmlspecialchars($c) ?>"<?= $c === $userCountry ? ' selected' : '' ?>><?= htmlspecialchars($c) ?></option>
+            <?php endforeach; ?>
+          </select>
         </div>
         <div class="fg">
           <label class="fl">Additional Notes <span style="font-weight:400;color:var(--mist-400)">(optional)</span></label>
