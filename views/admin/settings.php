@@ -383,10 +383,15 @@ _smartsupp.key = 'YOUR_KEY_HERE';
 
   const esc = s => String(s==null?'':s).replace(/"/g,'&quot;');
   function sync(){ jsonEl.value = JSON.stringify(accounts); }
+  const isActive = a => a.active === undefined || a.active === true || a.active === '1' || a.active === 1;
   function render(){
     listEl.innerHTML = accounts.map((a,i) => `
-      <div style="border:1px solid var(--border);border-radius:var(--r);padding:.9rem 1rem;margin-bottom:.75rem;position:relative">
+      <div style="border:1px solid var(--border);border-radius:var(--r);padding:.9rem 1rem;margin-bottom:.75rem;position:relative;${isActive(a)?'':'opacity:.6'}">
         <button type="button" class="wx-del" data-i="${i}" title="Remove" style="position:absolute;top:.6rem;right:.6rem;background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;line-height:1">&times;</button>
+        <label style="display:inline-flex;align-items:center;gap:.5rem;font-size:12.5px;font-weight:600;margin-bottom:.7rem;cursor:pointer">
+          <input type="checkbox" class="wx-active" data-i="${i}" ${isActive(a)?'checked':''} style="width:15px;height:15px;accent-color:#C0392B;cursor:pointer"/>
+          Active <span style="font-weight:400;color:var(--text3)">— ${isActive(a)?'shown to investors':'hidden'}</span>
+        </label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem">
           ${FIELDS.map(([k,ph]) => `<div class="fg" style="margin:0"><label class="fl">${ph}</label><input class="fi wx-f" data-i="${i}" data-k="${k}" value="${esc(a[k])}" placeholder="${ph}"/></div>`).join('')}
         </div>
@@ -396,12 +401,16 @@ _smartsupp.key = 'YOUR_KEY_HERE';
     const el = e.target.closest('.wx-f'); if (!el) return;
     accounts[+el.dataset.i][el.dataset.k] = el.value; sync();
   });
+  listEl.addEventListener('change', e => {
+    const el = e.target.closest('.wx-active'); if (!el) return;
+    accounts[+el.dataset.i].active = el.checked; render(); sync();
+  });
   listEl.addEventListener('click', e => {
     const del = e.target.closest('.wx-del'); if (!del) return;
     accounts.splice(+del.dataset.i, 1); render(); sync();
   });
   document.getElementById('wx-add').addEventListener('click', () => {
-    accounts.push({label:'',symbol:'',bank:'',holder:'',number:'',type:'',routing:'',swift:'',address:'',min:'',max:''}); render(); sync();
+    accounts.push({active:true,label:'',symbol:'',bank:'',holder:'',number:'',type:'',routing:'',swift:'',address:'',min:'',max:''}); render(); sync();
   });
   const form = document.getElementById('settings-form');
   if (form) form.addEventListener('submit', sync, true); // ensure latest before FormData

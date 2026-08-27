@@ -438,6 +438,9 @@ function wire_extra_accounts(): array {
     $out = [];
     foreach ($arr as $a) {
         if (!is_array($a)) continue;
+        // Inactive accounts are hidden from investors (default: active, for older rows).
+        $active = !array_key_exists('active', $a) || $a['active'] === true || $a['active'] === 1 || $a['active'] === '1';
+        if (!$active) continue;
         $acc = [
             'label'   => trim((string) ($a['label']   ?? '')),
             'symbol'  => trim((string) ($a['symbol']  ?? '')),
