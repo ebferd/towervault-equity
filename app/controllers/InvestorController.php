@@ -521,6 +521,12 @@ class InvestorController {
         if (!in_array($method, ['crypto','paypal','wire','zelle','cashapp'], true)) {
             json_response(['success' => false, 'error' => 'Invalid payment method.']);
         }
+        // Wire transfers can carry a higher minimum than other methods.
+        if ($method === 'wire') {
+            $wireMinRaw = trim((string) platform_setting('wire_min', ''));
+            $wireMin    = $wireMinRaw !== '' ? (float) $wireMinRaw : $minDeposit;
+            if ($amount < $wireMin) json_response(['success' => false, 'error' => 'Minimum for wire transfer is ' . fmt_currency($wireMin) . '.']);
+        }
         if (platform_setting("payment_{$method}", '1') !== '1') {
             json_response(['success' => false, 'error' => 'This payment method is not enabled.']);
         }

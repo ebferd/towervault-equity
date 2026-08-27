@@ -267,8 +267,9 @@
   <div class="section" style="margin-top:1.5rem">
     <div class="section-head"><span class="section-title">Transaction Limits</span><span class="section-meta">Minimum amounts for deposits and withdrawals</span></div>
     <div class="section-body">
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:1rem">
         <div class="fg"><label class="fl">Minimum Deposit</label><input class="fi" type="number" name="min_deposit" value="<?= htmlspecialchars($payments['min_deposit']??'100') ?>" min="1" step="1"/><div style="font-size:11px;color:var(--text3);margin-top:4px">Minimum deposit per transaction.</div></div>
+        <div class="fg"><label class="fl">Minimum Wire Deposit</label><input class="fi" type="number" name="wire_min" value="<?= htmlspecialchars($payments['wire_min']??'') ?>" min="0" step="1" placeholder="e.g. 1000"/><div style="font-size:11px;color:var(--text3);margin-top:4px">Minimum for wire only. Leave blank to use the general minimum.</div></div>
         <div class="fg"><label class="fl">Minimum Withdrawal</label><input class="fi" type="number" name="min_withdrawal" value="<?= htmlspecialchars($payments['min_withdrawal']??'50') ?>" min="1" step="1"/><div style="font-size:11px;color:var(--text3);margin-top:4px">Minimum withdrawal per request.</div></div>
         <div class="fg"><label class="fl">Deposit Invoice Timeout (s)</label><input class="fi" type="number" name="deposit_timeout" value="<?= htmlspecialchars($payments['deposit_timeout']??'1800') ?>" min="300" step="60"/><div style="font-size:11px;color:var(--text3);margin-top:4px">Default: 1800 = 30 minutes.</div></div>
       </div>

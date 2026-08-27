@@ -1170,7 +1170,7 @@ class AdminController {
             // Payments — Zelle & Cash App
             'zelle_recipient','zelle_name','cashapp_tag','cashapp_name',
             // Payments — misc
-            'deposit_timeout','min_deposit','min_withdrawal',
+            'deposit_timeout','min_deposit','min_withdrawal','wire_min',
             // Referrals
             'referral_commission',
             // SMTP
@@ -1212,7 +1212,7 @@ class AdminController {
             'cashapp_tag' => 'payments', 'cashapp_name' => 'payments',
             'withdraw_crypto' => 'payments', 'withdraw_paypal' => 'payments', 'withdraw_wire' => 'payments',
             'withdraw_zelle' => 'payments', 'withdraw_cashapp' => 'payments',
-            'deposit_timeout' => 'payments', 'min_deposit' => 'payments', 'min_withdrawal' => 'payments',
+            'deposit_timeout' => 'payments', 'min_deposit' => 'payments', 'min_withdrawal' => 'payments', 'wire_min' => 'payments',
             'referral_commission' => 'referrals',
             'smtp_host' => 'email', 'smtp_port' => 'email', 'smtp_user' => 'email',
             'smtp_pass' => 'email', 'smtp_secure' => 'email', 'smtp_from_name' => 'email',

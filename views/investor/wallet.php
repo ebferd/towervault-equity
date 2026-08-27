@@ -141,6 +141,8 @@ $wdZelle   = platform_setting('withdraw_zelle','1') === '1';
 $wdCashapp = platform_setting('withdraw_cashapp','1') === '1';
 $minDeposit    = (float) platform_setting('min_deposit', '100');
 $minWithdraw   = (float) platform_setting('min_withdrawal', '50');
+$wireMinRaw    = trim((string) platform_setting('wire_min', ''));
+$wireMin       = $wireMinRaw !== '' ? (float) $wireMinRaw : $minDeposit; // fall back to general minimum
 ?>
 <!-- Deposit Modal -->
 <div id="deposit-modal" class="modal-overlay">
@@ -173,7 +175,7 @@ $minWithdraw   = (float) platform_setting('min_withdrawal', '50');
         <?php if ($paypalEnabled): ?><div onclick="selectDep('paypal')" id="dm-paypal" class="pmethod-row"><div><div class="pmethod-name">PayPal</div><div class="pmethod-sub">Instant transfer</div></div><div id="dr-paypal" class="pmethod-radio"></div></div><?php endif; ?>
         <?php if ($zelleEnabled): ?><div onclick="selectDep('zelle')" id="dm-zelle" class="pmethod-row"><div><div class="pmethod-name">Zelle</div><div class="pmethod-sub">Bank-to-bank (US)</div></div><div id="dr-zelle" class="pmethod-radio"></div></div><?php endif; ?>
         <?php if ($cashappEnabled): ?><div onclick="selectDep('cashapp')" id="dm-cashapp" class="pmethod-row"><div><div class="pmethod-name">Cash App</div><div class="pmethod-sub">Instant transfer</div></div><div id="dr-cashapp" class="pmethod-radio"></div></div><?php endif; ?>
-        <?php if ($wireEnabled): ?><div onclick="selectDep('wire')" id="dm-wire" class="pmethod-row"><div><div class="pmethod-name">Wire Transfer</div><div class="pmethod-sub">3&ndash;5 business days</div></div><div id="dr-wire" class="pmethod-radio"></div></div><?php endif; ?>
+        <?php if ($wireEnabled): ?><div onclick="selectDep('wire')" id="dm-wire" class="pmethod-row"><div><div class="pmethod-name">Wire Transfer</div><div class="pmethod-sub">3&ndash;5 business days<?= $wireMin > $minDeposit ? ' &middot; min. ' . fmt_currency($wireMin) : '' ?></div></div><div id="dr-wire" class="pmethod-radio"></div></div><?php endif; ?>
         <div id="dep-wire-note" class="alert-banner" style="background:var(--amber-50);border:1px solid var(--amber-100);color:var(--amber-700);display:none">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
           <span>Wire transfer details will be shown on the next screen.</span>
@@ -434,6 +436,8 @@ async function startDeposit() {
   const minDep = <?= $minDeposit ?>;
   if (!amt || amt < minDep) { document.getElementById('dep-alert1').innerHTML='<div class="alert-banner err">Minimum deposit is <?= htmlspecialchars($sym) ?><?= $minDeposit ?>.</div>'; return; }
   if (!depMethod) { document.getElementById('dep-alert1').innerHTML='<div class="alert-banner err">Please select a payment method.</div>'; return; }
+  const wireMin = <?= $wireMin ?>;
+  if (depMethod === 'wire' && amt < wireMin) { document.getElementById('dep-alert1').innerHTML='<div class="alert-banner err">Minimum for wire transfer is <?= htmlspecialchars($sym) ?>'+wireMin.toLocaleString('en-US')+'.</div>'; return; }
   if (depMethod === 'crypto' && !depCoin) { document.getElementById('dep-alert1').innerHTML='<div class="alert-banner err">Please select a cryptocurrency.</div>'; return; }
 
   const btn = document.getElementById('dep-btn1');
