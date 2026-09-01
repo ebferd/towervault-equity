@@ -71,7 +71,10 @@ $type  = $inv['type'] ?? 'real_estate';
             <div class="fg"><label class="fl">Min. Investment (<?= htmlspecialchars(platform_setting('platform_symbol','$')) ?>)</label><input class="fi" type="number" name="min_investment" value="<?= htmlspecialchars($inv['min_investment']??'1000') ?>" min="0" step="1" required/></div>
             <div class="fg"><label class="fl">Max. Investment <span class="fl-opt">(leave blank for unlimited)</span></label><input class="fi" type="number" name="max_investment" value="<?= htmlspecialchars($inv['max_investment']??'') ?>" min="0" step="1"/></div>
           </div>
-          <div class="fg"><label class="fl">Funding Target <span class="fl-opt">(optional)</span></label><input class="fi" type="number" name="funding_target" value="<?= htmlspecialchars($inv['funding_target']??'') ?>" min="0" step="1000"/></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+            <div class="fg"><label class="fl">Funding Target <span class="fl-opt">(optional)</span></label><input class="fi" type="number" name="funding_target" value="<?= htmlspecialchars($inv['funding_target']??'') ?>" min="0" step="1000"/></div>
+            <div class="fg"><label class="fl">Funding Raised <span class="fl-opt">(drives the % funded bar)</span></label><input class="fi" type="number" name="funding_raised" value="<?= htmlspecialchars($inv['funding_raised']??'0') ?>" min="0" step="100"/><div style="font-size:11px;color:var(--text3);margin-top:4px">Real investments add to this automatically. You can set it manually to adjust the progress bar.</div></div>
+          </div>
         </div>
       </div>
 

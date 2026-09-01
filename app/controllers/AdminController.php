@@ -642,15 +642,15 @@ class AdminController {
         try {
             $id = (int) DB::insert(
                 "INSERT INTO investments (name, slug, type, status, short_desc, description, roi, duration_value, duration_unit,
-                  payout_frequency, min_investment, max_investment, funding_target, property_type, street_address, city, state_region,
+                  payout_frequency, min_investment, max_investment, funding_target, funding_raised, property_type, street_address, city, state_region,
                   country, postcode, maps_link, property_size, total_units, occupancy_rate, year_built, completion_date,
                   ticker, fund_category, risk_level, management_fee, benchmark, fund_start_date, fund_end_date,
                   is_featured, is_verified, notify_on_launch, created_by)
-                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 [
                     $data['name'], $slug, $data['type'], $data['status'], $data['short_desc'], $data['description'],
                     $data['roi'], $data['duration_value'], $data['duration_unit'], $data['payout_frequency'],
-                    $data['min_investment'], $data['max_investment'], $data['funding_target'], $data['property_type'],
+                    $data['min_investment'], $data['max_investment'], $data['funding_target'], $data['funding_raised'], $data['property_type'],
                     $data['street_address'], $data['city'], $data['state_region'], $data['country'], $data['postcode'],
                     $data['maps_link'], $data['property_size'], $data['total_units'], $data['occupancy_rate'],
                     $data['year_built'], $data['completion_date'], $data['ticker'], $data['fund_category'],
@@ -720,7 +720,7 @@ class AdminController {
 
         DB::execute(
             "UPDATE investments SET name=?,type=?,status=?,short_desc=?,description=?,roi=?,duration_value=?,duration_unit=?,
-              payout_frequency=?,min_investment=?,max_investment=?,funding_target=?,property_type=?,street_address=?,city=?,
+              payout_frequency=?,min_investment=?,max_investment=?,funding_target=?,funding_raised=?,property_type=?,street_address=?,city=?,
               state_region=?,country=?,postcode=?,maps_link=?,property_size=?,total_units=?,occupancy_rate=?,year_built=?,
               completion_date=?,ticker=?,fund_category=?,risk_level=?,management_fee=?,benchmark=?,fund_start_date=?,
               fund_end_date=?,is_featured=?,is_verified=?,notify_on_launch=?,updated_at=NOW() WHERE id=?",
@@ -1733,6 +1733,7 @@ class AdminController {
             'min_investment'   => (float)($_POST['min_investment'] ?? 100),
             'max_investment'   => $num('max_investment'),
             'funding_target'   => $num('funding_target'),
+            'funding_raised'   => (float)($_POST['funding_raised'] ?? 0),
             'property_type'    => $str('property_type'),
             'street_address'   => $str('street_address'),
             'city'             => $str('city'),
