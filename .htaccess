@@ -13,6 +13,10 @@
     # Block direct access to private folders (return 403)
     RewriteRule ^(app|config|cron|database|routes|views|storage|vendor)(/?|/.*)$ - [F,L]
 
+    # Block version-control metadata & hidden files (prevents source/repo disclosure)
+    RewriteRule (^|/)\.git                 - [F,L]
+    RewriteRule (^|/)\.(?!well-known)[^/]* - [F,L]
+
     # Block .env and composer files
     RewriteRule ^\.env$                  - [F,L]
     RewriteRule ^composer\.(json|lock)$  - [F,L]
