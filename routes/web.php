@@ -123,6 +123,7 @@ Router::get('/investor/certificates',    [InvestorController::class, 'certificat
 Router::get('/investor/certificate/{ref}',[InvestorController::class, 'downloadCertificate']);
 Router::get('/investor/calculator',      [InvestorController::class, 'calculator']);
 Router::get('/investor/how-it-works',    [InvestorController::class, 'howItWorks']);
+Router::get('/investor/install',         [InvestorController::class, 'installApp']);
 Router::post('/investor/terminate',      [InvestorController::class, 'terminateInvestment']);
 Router::get('/investor/data-export',     [InvestorController::class, 'dataExport']);
 Router::post('/investor/request-deletion',[InvestorController::class, 'requestDeletion']);

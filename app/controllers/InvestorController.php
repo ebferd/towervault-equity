@@ -1301,6 +1301,12 @@ class InvestorController {
         exit;
     }
 
+    // ── Install app page ───────────────────────────────────────
+    public static function installApp(): void {
+        AuthMiddleware::investor();
+        view('investor.install', ['title' => 'Install app'], 'main');
+    }
+
     // ── PWA: web app manifest (public) ─────────────────────────
     public static function manifest(): void {
         $name  = platform_setting('platform_name', 'NexVest');
