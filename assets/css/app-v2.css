@@ -35,11 +35,11 @@ body{font-family:'Inter',sans-serif;color:var(--mist-900);background:var(--mist-
 .sb-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:30}
 .sb-overlay.open{display:block}
 
-.sidebar{width:248px;background:var(--ink-900);color:#fff;display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;height:100vh;z-index:40;transition:transform .25s ease;overflow-y:auto}
-.sb-logo{display:flex;align-items:center;gap:10px;padding:1.5rem 1.25rem 1.25rem}
+.sidebar{width:248px;background:var(--ink-900);color:#fff;display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;height:100vh;z-index:40;transition:transform .25s ease;overflow:hidden}
+.sb-logo{display:flex;align-items:center;gap:10px;padding:1.5rem 1.25rem 1.25rem;flex-shrink:0}
 .logo-mark{width:30px;height:30px;border-radius:8px;background:var(--em-500);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:600;font-size:14px;color:var(--ink-950);flex-shrink:0}
 .sb-name{font-size:14.5px;font-weight:600;letter-spacing:-.2px}
-.sb-nav{flex:1;padding:.5rem .75rem}
+.sb-nav{flex:1;min-height:0;overflow-y:auto;padding:.5rem .75rem}
 .sb-section{font-size:10.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.3);padding:1rem .6rem .4rem}
 .sb-item{display:flex;align-items:center;gap:11px;padding:.6rem .65rem;border-radius:8px;font-size:13.5px;font-weight:500;color:rgba(255,255,255,.55);margin-bottom:1px;position:relative;transition:background .15s,color .15s}
 .sb-item:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.85)}
@@ -48,7 +48,7 @@ body{font-family:'Inter',sans-serif;color:var(--mist-900);background:var(--mist-
 .sb-item svg{flex-shrink:0;opacity:.85}
 .sb-badge{margin-left:auto;background:var(--em-600);color:#fff;font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:99px;min-width:18px;text-align:center}
 .sb-badge.warn{background:var(--amber-700)}
-.sb-bottom{padding:1rem .9rem 1.25rem;border-top:1px solid rgba(255,255,255,.08)}
+.sb-bottom{padding:1rem .9rem 1.25rem;border-top:1px solid rgba(255,255,255,.08);flex-shrink:0}
 .sb-user{display:flex;align-items:center;gap:10px;padding:.5rem;border-radius:8px;margin-bottom:.6rem}
 .sb-avatar{width:32px;height:32px;border-radius:50%;background:var(--em-600);display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;color:#fff;flex-shrink:0}
 .sb-uname{font-size:13px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}
