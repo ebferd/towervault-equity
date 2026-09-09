@@ -88,6 +88,8 @@ Router::get('/terms',                    [InvestorController::class, 'terms']);
 Router::get('/privacy',                  [InvestorController::class, 'privacy']);
 Router::get('/unsubscribe',              [InvestorController::class, 'unsubscribe']);
 Router::get('/e/open',                   [InvestorController::class, 'emailOpen']);
+Router::get('/manifest.webmanifest',     [InvestorController::class, 'manifest']);
+Router::get('/sw.js',                    [InvestorController::class, 'serviceWorker']);
 
 // ── Investor (Authenticated) ──────────────────────────────────
 Router::get('/investor/dashboard',       [InvestorController::class, 'dashboard']);

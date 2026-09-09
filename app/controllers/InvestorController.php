@@ -1301,6 +1301,79 @@ class InvestorController {
         exit;
     }
 
+    // ── PWA: web app manifest (public) ─────────────────────────
+    public static function manifest(): void {
+        $name  = platform_setting('platform_name', 'NexVest');
+        $logo  = trim((string) platform_setting('platform_logo', '')) ?: trim((string) platform_setting('platform_favicon', ''));
+        $icons = [];
+        if ($logo !== '') {
+            $src  = file_url_abs($logo);
+            $type = preg_match('/\.png$/i', $src) ? 'image/png'
+                  : (preg_match('/\.jpe?g$/i', $src) ? 'image/jpeg'
+                  : (preg_match('/\.svg$/i', $src) ? 'image/svg+xml' : 'image/png'));
+            foreach (['192x192', '512x512'] as $s) $icons[] = ['src' => $src, 'sizes' => $s, 'type' => $type, 'purpose' => 'any'];
+            $icons[] = ['src' => $src, 'sizes' => '512x512', 'type' => $type, 'purpose' => 'maskable'];
+        }
+        $manifest = [
+            'name'             => $name,
+            'short_name'       => mb_substr($name, 0, 12),
+            'description'      => $name . ' investor portal',
+            'start_url'        => '/investor/dashboard',
+            'scope'            => '/',
+            'display'          => 'standalone',
+            'orientation'      => 'portrait',
+            'background_color' => '#ffffff',
+            'theme_color'      => '#059669',
+            'icons'            => $icons,
+        ];
+        header('Content-Type: application/manifest+json; charset=utf-8');
+        header('Cache-Control: public, max-age=3600');
+        echo json_encode($manifest, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+        exit;
+    }
+
+    // ── PWA: service worker (public, root scope) ───────────────
+    public static function serviceWorker(): void {
+        header('Content-Type: application/javascript; charset=utf-8');
+        header('Service-Worker-Allowed: /');
+        header('Cache-Control: no-cache');
+        // Cache-first for static assets & fonts; network-first for pages with an offline fallback.
+        // Authenticated HTML is never cached, so balances/data are always fresh.
+        echo <<<'JS'
+const CACHE = 'tv-app-v2';
+const ASSET_RE = /\/assets\/|fonts\.(googleapis|gstatic)\.com|cdn\.jsdelivr\.net/;
+self.addEventListener('install', function(){ self.skipWaiting(); });
+self.addEventListener('activate', function(e){ e.waitUntil((async function(){
+  var keys = await caches.keys();
+  await Promise.all(keys.filter(function(k){ return k !== CACHE; }).map(function(k){ return caches.delete(k); }));
+  await self.clients.claim();
+})()); });
+self.addEventListener('fetch', function(e){
+  var req = e.request;
+  if (req.method !== 'GET') return;
+  if (ASSET_RE.test(req.url)) {
+    e.respondWith((async function(){
+      var c = await caches.open(CACHE);
+      var hit = await c.match(req);
+      if (hit) return hit;
+      try { var res = await fetch(req); if (res && res.status === 200) c.put(req, res.clone()); return res; }
+      catch (err) { return hit || Response.error(); }
+    })());
+    return;
+  }
+  if (req.mode === 'navigate') {
+    e.respondWith((async function(){
+      try { return await fetch(req); }
+      catch (err) {
+        return new Response('<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><style>body{font-family:system-ui,-apple-system,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0;background:#0B1120;color:#fff;text-align:center;padding:24px}h1{font-size:20px;margin:0 0 8px}p{color:#9aa4b8;margin:0}</style><div><h1>You\'re offline</h1><p>Reconnect to the internet to continue.</p></div>', { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+      }
+    })());
+  }
+});
+JS;
+        exit;
+    }
+
     // ── Profile ────────────────────────────────────────────────
     public static function profile(): void {
         AuthMiddleware::investor();
