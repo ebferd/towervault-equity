@@ -309,7 +309,7 @@ function obToggle(){
       <div class="db-chart-meta">
         <div>
           <div class="db-chart-total" id="db-chart-total"><?= fmt_currency($stats['total_earned']) ?></div>
-          <div class="db-chart-sub">Cumulative returns &amp; commissions</div>
+          <div class="db-chart-sub">Cumulative returns paid</div>
         </div>
       </div>
       <div class="db-chart-wrap"><canvas id="dbChart"></canvas></div>

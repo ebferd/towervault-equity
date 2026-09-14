@@ -394,7 +394,7 @@ class AdminController {
             $txList[] = ['ts' => $ts, 'type' => 'return', 'sign' => 1, 'amt' => $amt, 'desc' => 'ROI payout — ' . $planName];
         }
         $principal = 0.0;
-        if ($tPrincipal && $reachedMaturity) { $principal = $amount; $txList[] = ['ts' => $endTs, 'type' => 'return', 'sign' => 1, 'amt' => $amount, 'desc' => 'Principal returned — ' . $planName]; }
+        if ($tPrincipal && $reachedMaturity) { $principal = $amount; $txList[] = ['ts' => $endTs, 'type' => 'principal', 'sign' => 1, 'amt' => $amount, 'desc' => 'Principal returned — ' . $planName]; }
         usort($txList, fn($a, $b) => $a['ts'] <=> $b['ts']);
 
         $net = 0.0; foreach ($txList as $t) $net += $t['sign'] * $t['amt'];

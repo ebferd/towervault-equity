@@ -52,20 +52,39 @@ class InvestorController {
         view('investor.dashboard', compact('user','stats','recent_tx','notifications','unread_count','holdings','uid','chartData','onboarding','onboardingComplete','pendingInvoices') + ['title'=>'Dashboard']);
     }
 
-    // Cumulative earnings (returns + referral commissions) over 7d / 30d / 1y windows.
+    // Cumulative ROI returns over 7d / 30d / 1y windows. The curve is the
+    // lifetime running total zoomed to the window (each window is seeded with
+    // everything earned before it), so the line always ends at the same
+    // lifetime total shown in the "Returns earned" stat — never resetting to
+    // zero at the start of the window. Referral commissions and returned
+    // principal are excluded, matching that stat.
     private static function buildEarningsSeries(int $uid): array {
-        $buildDaily = function (int $days, string $labelFmt) use ($uid) {
+        $QUALIFY = "type='return' AND status='completed'
+                    AND description NOT LIKE '%principal%' AND description NOT LIKE '%capital%'";
+
+        $priorTotal = function (string $beforeExpr) use ($uid, $QUALIFY): float {
+            $row = DB::fetch(
+                "SELECT COALESCE(SUM(amount),0) AS t FROM transactions
+                 WHERE user_id=? AND {$QUALIFY} AND created_at < {$beforeExpr}",
+                [$uid]
+            );
+            return (float) ($row['t'] ?? 0);
+        };
+
+        $buildDaily = function (int $days, string $labelFmt) use ($uid, $QUALIFY, $priorTotal) {
             $rows = DB::fetchAll(
                 "SELECT DATE(created_at) AS d, SUM(amount) AS amt FROM transactions
-                 WHERE user_id=? AND type IN ('return','referral_commission') AND status='completed'
-                   AND created_at >= DATE_SUB(CURDATE(), INTERVAL {$days} DAY)
+                 WHERE user_id=? AND {$QUALIFY}
+                   AND created_at >= DATE_SUB(CURDATE(), INTERVAL " . ($days - 1) . " DAY)
                  GROUP BY DATE(created_at)",
                 [$uid]
             );
             $byDate = [];
             foreach ($rows as $r) { $byDate[$r['d']] = (float)$r['amt']; }
 
-            $labels = []; $data = []; $running = 0.0;
+            // Seed with everything earned before the first day in the window.
+            $labels = []; $data = [];
+            $running = $priorTotal("DATE_SUB(CURDATE(), INTERVAL " . ($days - 1) . " DAY)");
             for ($i = $days - 1; $i >= 0; $i--) {
                 $date = date('Y-m-d', strtotime("-{$i} days"));
                 $running += $byDate[$date] ?? 0;
@@ -75,18 +94,20 @@ class InvestorController {
             return ['labels' => $labels, 'data' => $data];
         };
 
-        $buildMonthly = function () use ($uid) {
+        $buildMonthly = function () use ($uid, $QUALIFY, $priorTotal) {
             $rows = DB::fetchAll(
                 "SELECT DATE_FORMAT(created_at,'%Y-%m') AS m, SUM(amount) AS amt FROM transactions
-                 WHERE user_id=? AND type IN ('return','referral_commission') AND status='completed'
-                   AND created_at >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+                 WHERE user_id=? AND {$QUALIFY}
+                   AND created_at >= DATE_SUB(DATE_FORMAT(CURDATE(),'%Y-%m-01'), INTERVAL 11 MONTH)
                  GROUP BY DATE_FORMAT(created_at,'%Y-%m')",
                 [$uid]
             );
             $byMonth = [];
             foreach ($rows as $r) { $byMonth[$r['m']] = (float)$r['amt']; }
 
-            $labels = []; $data = []; $running = 0.0;
+            // Seed with everything earned before the first month in the window.
+            $labels = []; $data = [];
+            $running = $priorTotal("DATE_SUB(DATE_FORMAT(CURDATE(),'%Y-%m-01'), INTERVAL 11 MONTH)");
             for ($i = 11; $i >= 0; $i--) {
                 $key = date('Y-m', strtotime("-{$i} months"));
                 $running += $byMonth[$key] ?? 0;
@@ -499,7 +520,9 @@ class InvestorController {
         $totals = DB::fetch(
             "SELECT
                 COALESCE(SUM(CASE WHEN type='deposit'    AND status='completed' THEN amount ELSE 0 END),0) AS total_deposited,
-                COALESCE(SUM(CASE WHEN type='return'     AND status='completed' THEN amount ELSE 0 END),0) AS total_returns,
+                COALESCE(SUM(CASE WHEN type='return'     AND status='completed'
+                                   AND description NOT LIKE '%principal%' AND description NOT LIKE '%capital%'
+                                  THEN amount ELSE 0 END),0) AS total_returns,
                 COALESCE(SUM(CASE WHEN type='withdrawal' AND status='completed' THEN amount ELSE 0 END),0) AS total_withdrawn
              FROM transactions WHERE user_id=?",
             [$uid]
