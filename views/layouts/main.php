@@ -116,7 +116,6 @@ $nav = [
         </button>
         <div>
           <div class="tb-page"><?= htmlspecialchars($title ?? 'Dashboard') ?></div>
-          <div class="tb-bc"><?= htmlspecialchars($pName) ?> &middot; Investor Portal</div>
         </div>
       </div>
       <div class="tb-right">
