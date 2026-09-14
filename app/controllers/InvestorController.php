@@ -1999,16 +1999,25 @@ HTML;
     // ── How It Works ───────────────────────────────────────────
     public static function howItWorks(): void {
         AuthMiddleware::investor();
-        // Everything on the page reads from platform settings so it stays accurate
+
+        // Smallest entry point = lowest minimum across active plans, else the deposit minimum.
+        $planMin = DB::fetch("SELECT MIN(min_investment) m FROM investments WHERE status='active'")['m'] ?? null;
+        $minInvest = $planMin !== null ? (float) $planMin : (float) platform_setting('min_deposit', '100');
+
+        // Only the payment methods actually enabled.
+        $payMethods = [];
+        if (platform_setting('payment_crypto', '1') === '1')  $payMethods[] = 'crypto';
+        if (platform_setting('payment_wire', '1')   === '1')  $payMethods[] = 'bank transfer';
+        if (platform_setting('payment_paypal', '1') === '1')  $payMethods[] = 'PayPal';
+        if (platform_setting('payment_zelle', '1')  === '1')  $payMethods[] = 'Zelle';
+        if (platform_setting('payment_cashapp', '1')=== '1')  $payMethods[] = 'Cash App';
+
         view('investor.how_it_works', [
             'title'       => 'How It Works',
-            'minDeposit'  => (float) platform_setting('min_deposit',    '100'),
+            'minInvest'   => $minInvest,
             'minWithdraw' => (float) platform_setting('min_withdrawal', '50'),
             'kycOn'       => platform_setting('kyc_enabled', '1') === '1',
-            'refRate'     => (float) platform_setting('referral_commission', '5'),
-            'payCrypto'   => platform_setting('payment_crypto', '1') === '1',
-            'payPaypal'   => platform_setting('payment_paypal', '1') === '1',
-            'payWire'     => platform_setting('payment_wire',   '1') === '1',
+            'payMethods'  => $payMethods,
             'sampleRoi'   => (float) (DB::fetch("SELECT roi FROM investments WHERE status='active' ORDER BY id LIMIT 1")['roi'] ?? 20),
         ]);
     }
