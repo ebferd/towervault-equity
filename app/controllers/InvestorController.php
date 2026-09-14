@@ -1320,7 +1320,8 @@ class InvestorController {
             "SELECT * FROM news_posts WHERE id<>? AND status='published' AND (expires_at IS NULL OR expires_at > NOW())
              ORDER BY published_at DESC LIMIT 4", [$id]
         );
-        view('investor.news_post', ['title' => $post['title'], 'post' => $post, 'more' => $more], 'main');
+        // Short topbar title (the full headline is the article's own H1 in the body).
+        view('investor.news_post', ['title' => 'Market News', 'post' => $post, 'more' => $more], 'main');
     }
 
     // ── Install app page ───────────────────────────────────────

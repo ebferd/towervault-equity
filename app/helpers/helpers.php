@@ -456,6 +456,15 @@ function news_photo_class(array $post): string {
     return 'nw-photo p' . news_art((int) ($post['id'] ?? 0));
 }
 
+/** Inside a .nw-photo: the article's real image if present, else the skyline placeholder. */
+function news_photo_inner(array $post): string {
+    $img = trim((string) ($post['image'] ?? ''));
+    if ($img !== '') {
+        return '<img src="' . htmlspecialchars($img, ENT_QUOTES) . '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'"/>';
+    }
+    return news_sky();
+}
+
 /** A small skyline SVG for placeholder photos. */
 function news_sky(): string {
     return '<svg class="nw-sky" viewBox="0 0 400 150" preserveAspectRatio="none"><g fill="rgba(255,255,255,.28)"><rect x="30" y="70" width="34" height="80"/><rect x="72" y="45" width="40" height="105"/><rect x="120" y="85" width="28" height="65"/><rect x="156" y="30" width="46" height="120"/><rect x="210" y="60" width="32" height="90"/><rect x="250" y="78" width="38" height="72"/><rect x="296" y="40" width="44" height="110"/><rect x="348" y="72" width="30" height="78"/></g></svg>';
@@ -470,65 +479,101 @@ function news_source(array $post): string {
     return '<span class="nw-src"><span class="nw-fav" style="background:' . $color . '">' . htmlspecialchars($letter) . '</span>' . htmlspecialchars($name) . '</span>';
 }
 
-/**
- * Pull up to $max new items from the configured RSS feed into news_posts.
- * Returns the number inserted. Shared by the cron and the admin "Fetch now".
- */
-function news_pull(int $max = 1): int {
-    $url = trim((string) platform_setting('news_rss_url', ''));
-    if ($url === '') return 0;
-
+/** Fetch a URL body (curl, then file_get_contents fallback). */
+function news_http(string $url): string {
     $ua = 'Mozilla/5.0 (compatible; NexVestNewsBot/1.0)';
     $body = '';
     if (function_exists('curl_init')) {
         $ch = curl_init($url);
         curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_TIMEOUT => 15, CURLOPT_USERAGENT => $ua, CURLOPT_SSL_VERIFYPEER => false]);
+            CURLOPT_TIMEOUT => 20, CURLOPT_USERAGENT => $ua, CURLOPT_SSL_VERIFYPEER => false]);
         $body = (string) curl_exec($ch);
         curl_close($ch);
     }
     if ($body === '') {
-        $ctx = stream_context_create(['http' => ['header' => "User-Agent: {$ua}\r\n", 'timeout' => 15]]);
+        $ctx = stream_context_create(['http' => ['header' => "User-Agent: {$ua}\r\n", 'timeout' => 20]]);
         $body = (string) @file_get_contents($url, false, $ctx);
     }
-    if ($body === '') return 0;
+    return $body;
+}
 
-    $prev = libxml_use_internal_errors(true);
-    $xml  = simplexml_load_string($body);
-    libxml_use_internal_errors($prev);
-    if ($xml === false || !isset($xml->channel->item)) return 0;
+/**
+ * Pull up to $max new items from the configured RSS feed(s) into news_posts.
+ * The setting may hold several feed URLs (one per line / comma-separated);
+ * items across all feeds are merged and the newest new ones are inserted.
+ * Reads real summaries and images when the feed provides them.
+ */
+function news_pull(int $max = 1): int {
+    $raw = trim((string) platform_setting('news_rss_url', ''));
+    if ($raw === '') return 0;
+    $feeds = array_filter(array_map('trim', preg_split('/[\r\n,]+/', $raw) ?: []));
+
+    $candidates = [];
+    foreach ($feeds as $feed) {
+        $body = news_http($feed);
+        if ($body === '') continue;
+        $prev = libxml_use_internal_errors(true);
+        $xml  = simplexml_load_string($body);
+        libxml_use_internal_errors($prev);
+        if ($xml === false || !isset($xml->channel->item)) continue;
+
+        $chan = trim((string) $xml->channel->title);
+        $domainMap = [
+            'nytimes.com' => 'The New York Times', 'theguardian.com' => 'The Guardian',
+            'cnbc.com' => 'CNBC', 'bloomberg.com' => 'Bloomberg', 'reuters.com' => 'Reuters',
+            'ft.com' => 'Financial Times', 'wsj.com' => 'The Wall Street Journal',
+            'realtor.com' => 'Realtor.com', 'forbes.com' => 'Forbes', 'scmp.com' => 'SCMP',
+        ];
+
+        foreach ($xml->channel->item as $item) {
+            $link = trim((string) $item->link);
+            $guid = trim((string) ($item->guid ?? $link));
+            if ($guid === '') continue;
+            $hash = sha1($guid);
+
+            $title = trim(html_entity_decode((string) $item->title, ENT_QUOTES, 'UTF-8'));
+
+            // Prefer the item's <source>, else map the article domain, else the channel title.
+            $source = trim((string) ($item->source ?? ''));
+            if ($source === '') {
+                $host = preg_replace('/^www\./', '', (string) parse_url($link, PHP_URL_HOST));
+                foreach ($domainMap as $d => $name) { if ($host !== '' && str_contains($host, $d)) { $source = $name; break; } }
+                if ($source === '') $source = preg_split('/\s[>|–-]\s/', $chan)[0] ?: $chan;
+            }
+
+            $summary = preg_replace('/\s+/', ' ', trim(strip_tags(html_entity_decode((string) $item->description, ENT_QUOTES, 'UTF-8'))));
+            if (mb_strlen($summary) > 900) $summary = mb_substr($summary, 0, 897) . '…';
+
+            // Image: media:content / media:thumbnail / enclosure
+            $image = '';
+            $media = $item->children('http://search.yahoo.com/mrss/');
+            if (isset($media->content) && $media->content[0]->attributes()['url']) $image = (string) $media->content[0]->attributes()['url'];
+            elseif (isset($media->thumbnail) && $media->thumbnail[0]->attributes()['url']) $image = (string) $media->thumbnail[0]->attributes()['url'];
+            elseif (isset($item->enclosure) && str_contains((string) $item->enclosure->attributes()['type'], 'image')) $image = (string) $item->enclosure->attributes()['url'];
+
+            $pub = strtotime((string) $item->pubDate) ?: time();
+            $candidates[] = compact('hash', 'title', 'source', 'summary', 'image', 'link', 'pub');
+        }
+    }
+    if (!$candidates) return 0;
+
+    // Newest first.
+    usort($candidates, fn($a, $b) => $b['pub'] <=> $a['pub']);
 
     $inserted = 0;
-    foreach ($xml->channel->item as $item) {
+    foreach ($candidates as $c) {
         if ($inserted >= $max) break;
-        $link = trim((string) $item->link);
-        $guid = trim((string) ($item->guid ?? $link));
-        if ($guid === '') continue;
-        $hash = sha1($guid);
-        if (DB::fetch("SELECT id FROM news_posts WHERE guid_hash=?", [$hash])) continue;
-
-        $rawTitle = trim(html_entity_decode((string) $item->title, ENT_QUOTES, 'UTF-8'));
-        $source   = trim((string) ($item->source ?? ''));
-        if ($source === '' && preg_match('/^(.*)\s[-–]\s([^-–]+)$/u', $rawTitle, $m)) {
-            $title = trim($m[1]); $source = trim($m[2]);
-        } else {
-            $title = $rawTitle;
-            if ($source !== '') $title = preg_replace('/\s[-–]\s' . preg_quote($source, '/') . '$/u', '', $title) ?: $title;
-        }
-        $summary = preg_replace('/\s+/', ' ', trim(strip_tags(html_entity_decode((string) $item->description, ENT_QUOTES, 'UTF-8'))));
-        if (mb_strlen($summary) > 400) $summary = mb_substr($summary, 0, 397) . '…';
-        $pub = strtotime((string) $item->pubDate) ?: time();
-
+        if (DB::fetch("SELECT id FROM news_posts WHERE guid_hash=?", [$c['hash']])) continue;
         try {
             DB::query(
-                "INSERT INTO news_posts (title, summary, source_name, source_url, category, guid_hash, is_manual, status, published_at, expires_at)
-                 VALUES (?,?,?,?,?,?,0,'published',?,?)",
-                [mb_substr($title, 0, 400), $summary ?: null, ($source ?: null), ($link ?: null),
-                 news_detect_category($title . ' ' . $summary), $hash,
-                 date('Y-m-d H:i:s', $pub), date('Y-m-d H:i:s', time() + 7 * 86400)]
+                "INSERT INTO news_posts (title, summary, source_name, source_url, category, image, guid_hash, is_manual, status, published_at, expires_at)
+                 VALUES (?,?,?,?,?,?,?,0,'published',?,?)",
+                [mb_substr($c['title'], 0, 400), $c['summary'] ?: null, ($c['source'] ?: null), ($c['link'] ?: null),
+                 news_detect_category($c['title'] . ' ' . $c['summary']), ($c['image'] ?: null), $c['hash'],
+                 date('Y-m-d H:i:s', $c['pub']), date('Y-m-d H:i:s', time() + 7 * 86400)]
             );
             $inserted++;
-        } catch (\Throwable $e) { /* skip dupes/errors */ }
+        } catch (\Throwable $e) { /* skip dupes */ }
     }
     return $inserted;
 }

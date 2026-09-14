@@ -807,4 +807,5 @@ CREATE TABLE IF NOT EXISTS `marketing_recipients` (
 
 -- Default RSS feed (curated Google News query, top global outlets) — editable in admin.
 INSERT INTO `platform_settings` (`setting_key`,`setting_value`,`setting_group`) VALUES
- ('news_rss_url','https://news.google.com/rss/search?q=real+estate+(site:bloomberg.com+OR+site:reuters.com+OR+site:ft.com+OR+site:wsj.com+OR+site:cnbc.com+OR+site:theguardian.com+OR+site:scmp.com+OR+site:knightfrank.com)+when:3d&hl=en-US&gl=US&ceid=US:EN','general'),
+ ('news_rss_url','https://rss.nytimes.com/services/xml/rss/nyt/RealEstate.xml
+https://www.theguardian.com/money/property/rss','general'),

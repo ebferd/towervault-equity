@@ -480,7 +480,7 @@ function obToggle(){
         <span class="nw-live"><span class="d"></span>Live</span>
       </div>
       <a class="nw-lead" href="/investor/news/<?= (int)$nLead['id'] ?>">
-        <div class="<?= news_photo_class($nLead) ?>"><?= news_sky() ?><span class="nw-chip"><?= htmlspecialchars($nLead['category']) ?></span></div>
+        <div class="<?= news_photo_class($nLead) ?>"><?= news_photo_inner($nLead) ?><span class="nw-chip"><?= htmlspecialchars($nLead['category']) ?></span></div>
         <h4><?= htmlspecialchars($nLead['title']) ?></h4>
         <div class="m"><?= news_source($nLead) ?><span class="nw-dot"></span><span class="nw-time"><?= time_ago($nLead['published_at']) ?></span></div>
       </a>
@@ -488,7 +488,7 @@ function obToggle(){
       <div class="nw-list">
         <?php foreach ($nRest as $p): ?>
           <a class="nw-item" href="/investor/news/<?= (int)$p['id'] ?>">
-            <span class="nw-thumb <?= news_photo_class($p) ?>"></span>
+            <span class="nw-thumb <?= news_photo_class($p) ?>"><?= news_photo_inner($p) ?></span>
             <div><h5><?= htmlspecialchars($p['title']) ?></h5><div class="m"><?= news_source($p) ?><span class="nw-dot"></span><?= time_ago($p['published_at']) ?></div></div>
           </a>
         <?php endforeach; ?>

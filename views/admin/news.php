@@ -16,9 +16,9 @@
   <div class="section-head"><span class="section-title">News feed</span><span class="section-meta">The RSS source posts are pulled from</span></div>
   <div class="section-body">
     <div class="fg">
-      <label class="fl">RSS feed URL</label>
-      <input class="fi" id="nw-url" style="font-family:monospace;font-size:12px" value="<?= htmlspecialchars($feedUrl) ?>"/>
-      <p class="fl-opt" style="margin-top:.4rem">Default is a curated Google News query limited to top global outlets (Bloomberg, Reuters, FT, WSJ, CNBC, The Guardian, SCMP, Knight Frank). Adjust the <code>site:</code> list to change sources.</p>
+      <label class="fl">RSS feed URLs <span class="fl-opt">(one per line — items are merged, newest published)</span></label>
+      <textarea class="fi" id="nw-url" rows="3" style="font-family:monospace;font-size:12px;resize:vertical"><?= htmlspecialchars($feedUrl) ?></textarea>
+      <p class="fl-opt" style="margin-top:.4rem">Defaults to The New York Times &amp; The Guardian real-estate feeds — top global outlets that include real summaries and photos. Add or remove publisher feed URLs to change sources.</p>
     </div>
     <label style="display:flex;align-items:center;gap:.6rem;font-size:13px;cursor:pointer;margin:.3rem 0 1rem">
       <input type="checkbox" id="nw-enabled" <?= $newsEnabled ? 'checked' : '' ?> style="width:16px;height:16px;accent-color:#C0392B;cursor:pointer"/>

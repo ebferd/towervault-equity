@@ -8,7 +8,7 @@ if (!empty($post['expires_at'])) {
 <article class="nw-article">
   <a class="nw-back" href="/investor/news"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>Back to Market News</a>
 
-  <div class="<?= news_photo_class($post) ?> nw-hero"><?= news_sky() ?><span class="nw-chip"><?= htmlspecialchars($post['category']) ?></span></div>
+  <div class="<?= news_photo_class($post) ?> nw-hero"><?= news_photo_inner($post) ?><span class="nw-chip"><?= htmlspecialchars($post['category']) ?></span></div>
 
   <div class="nw-meta">
     <?= news_source($post) ?>
@@ -45,7 +45,7 @@ if (!empty($post['expires_at'])) {
       <div class="nw-grid">
         <?php foreach (array_slice($more, 0, 3) as $p): ?>
           <a class="nw-acard" href="/investor/news/<?= (int)$p['id'] ?>">
-            <div class="<?= news_photo_class($p) ?>" style="height:120px"><span class="nw-chip" style="position:absolute;left:9px;top:9px"><?= htmlspecialchars($p['category']) ?></span></div>
+            <div class="<?= news_photo_class($p) ?>" style="height:120px"><?= news_photo_inner($p) ?><span class="nw-chip" style="position:absolute;left:9px;top:9px"><?= htmlspecialchars($p['category']) ?></span></div>
             <div class="ab"><h4><?= htmlspecialchars($p['title']) ?></h4><div class="m"><?= news_source($p) ?></div></div>
           </a>
         <?php endforeach; ?>
