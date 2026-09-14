@@ -733,28 +733,30 @@ function audit_log(
 // ── View renderer ─────────────────────────────────────────────
 
 function view(string $template, array $_viewData = [], string $layout = 'main'): void {
-    $base = defined('ROOT') ? ROOT : dirname(__DIR__, 2);
+    // Underscore-prefixed internals so a template that defines a plain
+    // variable (e.g. $base) can't clobber the layout-resolution paths.
+    $_viewBase = defined('ROOT') ? ROOT : dirname(__DIR__, 2);
 
     // Always load component helpers first so svgIcon(), badge() etc
     // are available in ALL templates and layouts
-    $componentHelpers = $base . '/views/components/helpers.php';
-    if (file_exists($componentHelpers) && !function_exists('svgIcon')) {
-        require_once $componentHelpers;
+    $_componentHelpers = $_viewBase . '/views/components/helpers.php';
+    if (file_exists($_componentHelpers) && !function_exists('svgIcon')) {
+        require_once $_componentHelpers;
     }
+
+    $_tplFile    = $_viewBase . '/views/' . str_replace('.', '/', $template) . '.php';
+    $_layoutFile = $layout ? $_viewBase . '/views/layouts/' . $layout . '.php' : '';
+    if (!file_exists($_tplFile)) abort(500, "View not found: {$template}");
 
     extract($_viewData, EXTR_SKIP);
 
     ob_start();
-    $tplFile = $base . '/views/' . str_replace('.', '/', $template) . '.php';
-    if (!file_exists($tplFile)) abort(500, "View not found: {$template}");
-    require $tplFile;
+    require $_tplFile;
     $_rendered = ob_get_clean();
 
-    if ($layout) {
-        $content   = $_rendered; // layouts reference $content for the page body
-        $layoutFile = $base . '/views/layouts/' . $layout . '.php';
-        if (file_exists($layoutFile)) { require $layoutFile; }
-        else echo $_rendered;
+    if ($layout && file_exists($_layoutFile)) {
+        $content = $_rendered; // layouts reference $content for the page body
+        require $_layoutFile;
     } else {
         echo $_rendered;
     }

@@ -4,8 +4,8 @@
   $minStr = $fmt($minInvest);
   $roi   = (float) $sampleRoi;
   $roiStr = rtrim(rtrim(number_format($roi, 2), '0'), '.');
-  $base  = 1000; $ret = $base * $roi / 100; $tot = $base + $ret;
-  $invBarH = $tot > 0 ? max(40, round($base / $tot * 96)) : 78;
+  $baseAmt = 1000; $ret = $baseAmt * $roi / 100; $tot = $baseAmt + $ret;
+  $invBarH = $tot > 0 ? max(40, round($baseAmt / $tot * 96)) : 78;
   $mc = count($payMethods);
   $methodStr = $mc === 0 ? 'any of your available payment methods'
              : ($mc === 1 ? $payMethods[0]
@@ -220,13 +220,13 @@
     </div>
     <div class="hiw-calc">
       <div class="hiw-bars">
-        <div class="hiw-bar inv grow" style="height:<?= $invBarH ?>%;animation-delay:.1s"><span><?= $fmt($base) ?></span><small>You invest</small></div>
+        <div class="hiw-bar inv grow" style="height:<?= $invBarH ?>%;animation-delay:.1s"><span><?= $fmt($baseAmt) ?></span><small>You invest</small></div>
         <div class="hiw-bar ret grow" style="height:96%;animation-delay:.35s"><span><?= $fmt($tot) ?></span><small>Back to you</small></div>
       </div>
       <div class="hiw-calc-rows">
-        <div class="row"><span>You invest</span><b><?= $fmt($base) ?></b></div>
+        <div class="row"><span>You invest</span><b><?= $fmt($baseAmt) ?></b></div>
         <div class="row"><span>Total return (<?= $roiStr ?>%)</span><b>+<?= $fmt($ret) ?></b></div>
-        <div class="row"><span>Capital returned at maturity</span><b><?= $fmt($base) ?></b></div>
+        <div class="row"><span>Capital returned at maturity</span><b><?= $fmt($baseAmt) ?></b></div>
         <div class="row tot"><span>Total back in your wallet</span><b><?= $fmt($tot) ?></b></div>
       </div>
     </div>
