@@ -22,9 +22,11 @@ if (!empty($post['expires_at'])) {
   <h1><?= htmlspecialchars($post['title']) ?></h1>
 
   <div class="nw-body">
-    <?php if (!empty($post['summary'])): ?>
-      <p><?= nl2br(htmlspecialchars($post['summary'])) ?></p>
-    <?php else: ?>
+    <?php if (!empty($post['summary'])):
+      foreach (preg_split('/\n\n+/', trim($post['summary'])) as $para):
+        if (trim($para) === '') continue; ?>
+        <p><?= nl2br(htmlspecialchars($para)) ?></p>
+    <?php endforeach; else: ?>
       <p>Read the full story at the original source below.</p>
     <?php endif; ?>
   </div>

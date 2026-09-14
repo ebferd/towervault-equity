@@ -479,6 +479,19 @@ function news_source(array $post): string {
     return '<span class="nw-src"><span class="nw-fav" style="background:' . $color . '">' . htmlspecialchars($letter) . '</span>' . htmlspecialchars($name) . '</span>';
 }
 
+/** Convert RSS article HTML to clean plain text, preserving paragraph breaks. */
+function news_html_to_text(string $html): string {
+    $html = html_entity_decode($html, ENT_QUOTES, 'UTF-8');
+    $html = preg_replace('#<li[^>]*>#i', "\n• ", $html);
+    $html = preg_replace('#</(p|div|h[1-6]|li|ul|ol|blockquote)>#i', "\n\n", $html);
+    $html = preg_replace('#<br\s*/?>#i', "\n", $html);
+    $text = strip_tags($html);
+    $text = preg_replace('/[ \t]+/', ' ', $text);
+    $text = preg_replace('/[ \t]*\n[ \t]*/', "\n", $text);
+    $text = preg_replace('/\n{3,}/', "\n\n", $text);
+    return trim($text);
+}
+
 /** Fetch a URL body (curl, then file_get_contents fallback). */
 function news_http(string $url): string {
     $ua = 'Mozilla/5.0 (compatible; NexVestNewsBot/1.0)';
@@ -541,15 +554,21 @@ function news_pull(int $max = 1): int {
                 if ($source === '') $source = preg_split('/\s[>|–-]\s/', $chan)[0] ?: $chan;
             }
 
-            $summary = preg_replace('/\s+/', ' ', trim(strip_tags(html_entity_decode((string) $item->description, ENT_QUOTES, 'UTF-8'))));
-            if (mb_strlen($summary) > 900) $summary = mb_substr($summary, 0, 897) . '…';
+            // Prefer full syndicated article (content:encoded) over the short teaser.
+            $content  = $item->children('http://purl.org/rss/1.0/modules/content/');
+            $rawHtml  = isset($content->encoded) ? (string) $content->encoded : '';
+            $descHtml = (string) $item->description;
+            $bodyHtml = mb_strlen(strip_tags($rawHtml)) > mb_strlen(strip_tags($descHtml)) ? $rawHtml : $descHtml;
+            $summary  = news_html_to_text($bodyHtml);
+            if (mb_strlen($summary) > 4000) $summary = mb_substr($summary, 0, 3997) . '…';
 
-            // Image: media:content / media:thumbnail / enclosure
+            // Image: media:content / thumbnail / enclosure, else the first <img> inside the article
             $image = '';
             $media = $item->children('http://search.yahoo.com/mrss/');
             if (isset($media->content) && $media->content[0]->attributes()['url']) $image = (string) $media->content[0]->attributes()['url'];
             elseif (isset($media->thumbnail) && $media->thumbnail[0]->attributes()['url']) $image = (string) $media->thumbnail[0]->attributes()['url'];
             elseif (isset($item->enclosure) && str_contains((string) $item->enclosure->attributes()['type'], 'image')) $image = (string) $item->enclosure->attributes()['url'];
+            if ($image === '' && $rawHtml !== '' && preg_match('/<img[^>]+src=["\']([^"\']+)["\']/i', $rawHtml, $im)) $image = $im[1];
 
             $pub = strtotime((string) $item->pubDate) ?: time();
             $candidates[] = compact('hash', 'title', 'source', 'summary', 'image', 'link', 'pub');

@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS `news_posts` (
 -- Default RSS feeds (top global outlets with real summaries + images) — editable in admin.
 -- One feed per line; items across all feeds are merged and the newest is published.
 INSERT INTO `platform_settings` (`setting_key`,`setting_value`,`setting_group`) VALUES
- ('news_rss_url','https://rss.nytimes.com/services/xml/rss/nyt/RealEstate.xml\nhttps://www.theguardian.com/money/property/rss','general'),
+ ('news_rss_url','https://www.realtor.com/news/feed/
+https://www.theguardian.com/money/property/rss
+https://rss.nytimes.com/services/xml/rss/nyt/RealEstate.xml','general'),
  ('news_enabled','1','general')
 ON DUPLICATE KEY UPDATE `setting_value`=`setting_value`;

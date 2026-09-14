@@ -15,7 +15,7 @@
     <div class="fb">
       <span class="nw-chip solid">Top story</span>
       <h3><?= htmlspecialchars($lead['title']) ?></h3>
-      <?php if (!empty($lead['summary'])): ?><p><?= htmlspecialchars(mb_strimwidth($lead['summary'], 0, 180, '…')) ?></p><?php endif; ?>
+      <?php if (!empty($lead['summary'])): ?><p><?= htmlspecialchars(mb_strimwidth(preg_replace('/\s+/', ' ', $lead['summary']), 0, 180, '…')) ?></p><?php endif; ?>
       <div class="m"><?= news_source($lead) ?><span class="nw-dot"></span><span class="nw-time"><?= time_ago($lead['published_at']) ?></span></div>
     </div>
   </a>
