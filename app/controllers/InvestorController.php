@@ -1819,31 +1819,61 @@ HTML;
         if ($fromTs === false || $toTs === false || $fromTs > $toTs) { $toTs = time(); $fromTs = strtotime('-3 months', $toTs); }
 
         $allTx = DB::fetchAll("SELECT * FROM transactions WHERE user_id=? AND status='completed' ORDER BY created_at ASC, id ASC", [$uid]);
-        $credit = ['deposit', 'return', 'referral_commission', 'transfer_received'];
-        $signOf = function (array $t) use ($credit): int {
-            if ($t['type'] === 'adjustment') return ((float)$t['balance_after'] >= (float)$t['balance_before']) ? 1 : -1;
-            return in_array($t['type'], $credit, true) ? 1 : -1;
+        $credit = ['deposit', 'return', 'referral_commission', 'transfer_received', 'principal'];
+
+        // A transaction's effect on the wallet is taken from the recorded
+        // ledger (balance_after - balance_before) — the authoritative source
+        // of truth. This keeps the statement in step with the real wallet
+        // even when signs are ambiguous (principal returns, transfers) or
+        // stored balances were snapshotted out of order. Only when a row has
+        // no ledger recorded do we fall back to a type-based sign × amount.
+        $hasLedger = function (array $t): bool {
+            $b = $t['balance_before']; $a = $t['balance_after'];
+            return !($b === null && $a === null) && !((float)$b == 0.0 && (float)$a == 0.0);
+        };
+        $effectOf = function (array $t) use ($credit, $hasLedger): float {
+            if ($hasLedger($t)) return round((float)$t['balance_after'] - (float)$t['balance_before'], 2);
+            $amt = (float) $t['amount'];
+            if ($t['type'] === 'adjustment') return ((float)$t['balance_after'] >= (float)$t['balance_before']) ? $amt : -$amt;
+            return in_array($t['type'], $credit, true) ? $amt : -$amt;
         };
 
-        $running = 0.0; $opening = null; $moneyIn = 0.0; $moneyOut = 0.0; $rows = [];
+        // Anchor the statement to the real wallet balance and work outward,
+        // the way a bank statement reconciles. The closing balance is pinned
+        // to the actual wallet (minus any activity dated after the period),
+        // and everything before the period — including money that predates
+        // the transaction ledger — is folded into the opening "balance
+        // brought forward". This guarantees closing == the true wallet and
+        // opening + money in − money out == closing, for every account.
+        $wallet = (float) ($user['wallet_balance'] ?? 0);
+        $items = []; $deltaAfter = 0.0; $deltaIn = 0.0;
         $totDep = 0.0; $totInv = 0.0; $totRet = 0.0;
         foreach ($allTx as $t) {
-            $amt  = (float) $t['amount'];
+            $amt = (float) $t['amount'];
             if ($t['type'] === 'deposit') $totDep += $amt;
             if ($t['type'] === 'investment') $totInv += $amt;
-            if (in_array($t['type'], ['return', 'referral_commission'], true)) $totRet += $amt;
+            // Returns earned = ROI / commission only — never the returned principal.
+            $isPrincipal = $t['type'] === 'principal' || preg_match('/\b(principal|capital)\b/i', (string)($t['description'] ?? ''));
+            if (in_array($t['type'], ['return', 'referral_commission'], true) && !$isPrincipal) $totRet += $amt;
 
-            $sign = $signOf($t);
-            $txTs = strtotime($t['created_at']);
-            if ($txTs < $fromTs) { $running += $sign * $amt; continue; }
-            if ($txTs > $toTs) break;
-            if ($opening === null) $opening = $running;
-            $running += $sign * $amt;
-            if ($sign > 0) $moneyIn += $amt; else $moneyOut += $amt;
-            $rows[] = ['t' => $t, 'sign' => $sign, 'balance' => $running];
+            $delta = $effectOf($t);
+            $txTs  = strtotime($t['created_at']);
+            $items[] = ['t' => $t, 'delta' => $delta, 'ts' => $txTs];
+            if ($txTs > $toTs)        $deltaAfter += $delta;   // dated after the period
+            elseif ($txTs >= $fromTs) $deltaIn    += $delta;   // inside the period
+            // dated before the period → absorbed into the opening balance
         }
-        if ($opening === null) $opening = $running;
-        $closing = $running;
+
+        $opening  = round($wallet - $deltaAfter - $deltaIn, 2);
+        $running  = $opening; $moneyIn = 0.0; $moneyOut = 0.0; $rows = [];
+        foreach ($items as $it) {
+            if ($it['ts'] > $toTs || $it['ts'] < $fromTs) continue;
+            $delta = $it['delta'];
+            $running = round($running + $delta, 2);
+            if ($delta > 0) $moneyIn += $delta; elseif ($delta < 0) $moneyOut += -$delta;
+            $rows[] = ['t' => $it['t'], 'delta' => $delta, 'sign' => ($delta > 0 ? 1 : ($delta < 0 ? -1 : 0)), 'balance' => $running];
+        }
+        $closing = round($wallet - $deltaAfter, 2);
 
         // Company details — all from settings, never hardcoded
         $brand   = platform_setting('platform_name', 'NexVest');
@@ -1878,8 +1908,9 @@ HTML;
                 $desc = htmlspecialchars($t['description'] ?: ucwords(str_replace('_', ' ', $t['type'])));
                 $ref  = htmlspecialchars($t['reference'] ?? '');
                 $typeLbl = htmlspecialchars(ucwords(str_replace('_', ' ', $t['type'] === 'referral_commission' ? 'commission' : $t['type'])));
-                $in  = $r['sign'] > 0 ? '<span style="color:#1a7a4a">+' . $money((float)$t['amount']) . '</span>' : '<span style="color:#c4cbc2">—</span>';
-                $out = $r['sign'] < 0 ? '<span style="color:#8a5a2b">−' . $money((float)$t['amount']) . '</span>' : '<span style="color:#c4cbc2">—</span>';
+                $val = abs($r['delta']);
+                $in  = $r['sign'] > 0 ? '<span style="color:#1a7a4a">+' . $money($val) . '</span>' : '<span style="color:#c4cbc2">—</span>';
+                $out = $r['sign'] < 0 ? '<span style="color:#8a5a2b">−' . $money($val) . '</span>' : '<span style="color:#c4cbc2">—</span>';
                 $trHtml .= '<tr style="' . $bg . '">'
                     . '<td style="padding:9px 10px;border-bottom:1px solid #EEF1EC;font-weight:bold;white-space:nowrap">' . date('d M Y', $dt) . '<br/><span style="font-weight:normal;color:#6b7a70;font-size:9px">' . date('H:i', $dt) . '</span></td>'
                     . '<td style="padding:9px 10px;border-bottom:1px solid #EEF1EC">' . $desc . '<br/><span style="color:#8a938a;font-family:DejaVuSansMono,monospace;font-size:8.5px">' . $ref . '</span></td>'
