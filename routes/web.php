@@ -124,6 +124,8 @@ Router::get('/investor/certificate/{ref}',[InvestorController::class, 'downloadC
 Router::get('/investor/calculator',      [InvestorController::class, 'calculator']);
 Router::get('/investor/how-it-works',    [InvestorController::class, 'howItWorks']);
 Router::get('/investor/install',         [InvestorController::class, 'installApp']);
+Router::get('/investor/news',            [InvestorController::class, 'news']);
+Router::get('/investor/news/{id}',       [InvestorController::class, 'newsPost']);
 Router::post('/investor/terminate',      [InvestorController::class, 'terminateInvestment']);
 Router::get('/investor/data-export',     [InvestorController::class, 'dataExport']);
 Router::post('/investor/request-deletion',[InvestorController::class, 'requestDeletion']);
@@ -186,6 +188,12 @@ Router::post('/admin/marketing/senders/delete', [AdminController::class, 'delete
 Router::post('/admin/settings/test-smtp',[AdminController::class, 'testSmtp']);
 Router::post('/admin/users/{id}/email',  [AdminController::class, 'emailUser']);
 Router::get('/admin/reports',            [AdminController::class, 'reports']);
+Router::get('/admin/news',               [AdminController::class, 'news']);
+Router::post('/admin/news',              [AdminController::class, 'storeNews']);
+Router::post('/admin/news/settings',     [AdminController::class, 'saveNewsSettings']);
+Router::post('/admin/news/fetch',        [AdminController::class, 'fetchNews']);
+Router::post('/admin/news/{id}',         [AdminController::class, 'updateNews']);
+Router::post('/admin/news/{id}/delete',  [AdminController::class, 'deleteNews']);
 Router::get('/admin/invoices',           [AdminController::class, 'adminInvoices']);
 Router::post('/admin/invoices',          [AdminController::class, 'issueInvoice']);
 Router::post('/admin/invoices/{id}/cancel', [AdminController::class, 'cancelInvoice']);

@@ -230,6 +230,15 @@ function platform_setting(string $key, mixed $default = null): mixed {
     return $cache[$key] ?? $default;
 }
 
+/** Upsert a single platform setting (value is read fresh on the next request). */
+function set_platform_setting(string $key, string $value, string $group = 'general'): void {
+    DB::query(
+        "INSERT INTO platform_settings (setting_key, setting_value, setting_group) VALUES (?,?,?)
+         ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)",
+        [$key, $value, $group]
+    );
+}
+
 function platform_settings_group(string $group): array {
     $rows = DB::fetchAll("SELECT setting_key, setting_value FROM platform_settings WHERE setting_group = ?", [$group]);
     return array_column($rows, 'setting_value', 'setting_key');
@@ -418,6 +427,110 @@ function calc_period_return(float $amount, float $roiPercent, string $frequency,
 // Total return over the full duration = amount × roi/100 (roi is already the total).
 function calc_total_return(float $amount, float $roiPercent): float {
     return $amount * ($roiPercent / 100);
+}
+
+/** Guess a region tag for a news headline (used for the coloured category chip). */
+function news_detect_category(string $text): string {
+    $t = ' ' . mb_strtolower($text) . ' ';
+    $map = [
+        'Middle East'   => ['dubai','abu dhabi','uae','saudi','qatar','riyadh','doha'],
+        'Europe'        => ['london','uk','britain','paris','france','berlin','germany','madrid','spain','italy','europe','eurozone','amsterdam'],
+        'Asia'          => ['singapore','tokyo','japan','hong kong','china','shanghai','beijing','india','mumbai','seoul','asia'],
+        'United States' => ['u.s.','us ','usa','manhattan','new york','california','florida','texas','fed','mortgage rate','american'],
+        'Africa'        => ['nigeria','lagos','south africa','kenya','egypt','africa'],
+        'Australia'     => ['australia','sydney','melbourne'],
+    ];
+    foreach ($map as $region => $kw) {
+        foreach ($kw as $k) if (str_contains($t, ' ' . $k) || str_contains($t, $k . ' ')) return $region;
+    }
+    return 'Global';
+}
+
+/** Deterministic 0..(n-1) bucket for a news item, so its placeholder colour is stable. */
+function news_art(int $seed, int $n = 5): int {
+    return $seed % $n;
+}
+
+/** CSS class for a news item's placeholder photo (stable per id). */
+function news_photo_class(array $post): string {
+    return 'nw-photo p' . news_art((int) ($post['id'] ?? 0));
+}
+
+/** A small skyline SVG for placeholder photos. */
+function news_sky(): string {
+    return '<svg class="nw-sky" viewBox="0 0 400 150" preserveAspectRatio="none"><g fill="rgba(255,255,255,.28)"><rect x="30" y="70" width="34" height="80"/><rect x="72" y="45" width="40" height="105"/><rect x="120" y="85" width="28" height="65"/><rect x="156" y="30" width="46" height="120"/><rect x="210" y="60" width="32" height="90"/><rect x="250" y="78" width="38" height="72"/><rect x="296" y="40" width="44" height="110"/><rect x="348" y="72" width="30" height="78"/></g></svg>';
+}
+
+/** HTML for a source badge (coloured initial + name). */
+function news_source(array $post): string {
+    $name = trim((string) ($post['source_name'] ?? '')) ?: 'News';
+    $palette = ['#1A1A1A','#0A2A66','#FF6600','#C8102E','#0A66C2','#7A5CF0','#047857','#B45309'];
+    $color = $palette[abs(crc32(strtolower($name))) % count($palette)];
+    $letter = strtoupper(mb_substr($name, 0, 1));
+    return '<span class="nw-src"><span class="nw-fav" style="background:' . $color . '">' . htmlspecialchars($letter) . '</span>' . htmlspecialchars($name) . '</span>';
+}
+
+/**
+ * Pull up to $max new items from the configured RSS feed into news_posts.
+ * Returns the number inserted. Shared by the cron and the admin "Fetch now".
+ */
+function news_pull(int $max = 1): int {
+    $url = trim((string) platform_setting('news_rss_url', ''));
+    if ($url === '') return 0;
+
+    $ua = 'Mozilla/5.0 (compatible; NexVestNewsBot/1.0)';
+    $body = '';
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_TIMEOUT => 15, CURLOPT_USERAGENT => $ua, CURLOPT_SSL_VERIFYPEER => false]);
+        $body = (string) curl_exec($ch);
+        curl_close($ch);
+    }
+    if ($body === '') {
+        $ctx = stream_context_create(['http' => ['header' => "User-Agent: {$ua}\r\n", 'timeout' => 15]]);
+        $body = (string) @file_get_contents($url, false, $ctx);
+    }
+    if ($body === '') return 0;
+
+    $prev = libxml_use_internal_errors(true);
+    $xml  = simplexml_load_string($body);
+    libxml_use_internal_errors($prev);
+    if ($xml === false || !isset($xml->channel->item)) return 0;
+
+    $inserted = 0;
+    foreach ($xml->channel->item as $item) {
+        if ($inserted >= $max) break;
+        $link = trim((string) $item->link);
+        $guid = trim((string) ($item->guid ?? $link));
+        if ($guid === '') continue;
+        $hash = sha1($guid);
+        if (DB::fetch("SELECT id FROM news_posts WHERE guid_hash=?", [$hash])) continue;
+
+        $rawTitle = trim(html_entity_decode((string) $item->title, ENT_QUOTES, 'UTF-8'));
+        $source   = trim((string) ($item->source ?? ''));
+        if ($source === '' && preg_match('/^(.*)\s[-–]\s([^-–]+)$/u', $rawTitle, $m)) {
+            $title = trim($m[1]); $source = trim($m[2]);
+        } else {
+            $title = $rawTitle;
+            if ($source !== '') $title = preg_replace('/\s[-–]\s' . preg_quote($source, '/') . '$/u', '', $title) ?: $title;
+        }
+        $summary = preg_replace('/\s+/', ' ', trim(strip_tags(html_entity_decode((string) $item->description, ENT_QUOTES, 'UTF-8'))));
+        if (mb_strlen($summary) > 400) $summary = mb_substr($summary, 0, 397) . '…';
+        $pub = strtotime((string) $item->pubDate) ?: time();
+
+        try {
+            DB::query(
+                "INSERT INTO news_posts (title, summary, source_name, source_url, category, guid_hash, is_manual, status, published_at, expires_at)
+                 VALUES (?,?,?,?,?,?,0,'published',?,?)",
+                [mb_substr($title, 0, 400), $summary ?: null, ($source ?: null), ($link ?: null),
+                 news_detect_category($title . ' ' . $summary), $hash,
+                 date('Y-m-d H:i:s', $pub), date('Y-m-d H:i:s', time() + 7 * 86400)]
+            );
+            $inserted++;
+        } catch (\Throwable $e) { /* skip dupes/errors */ }
+    }
+    return $inserted;
 }
 
 /** Full list of country names for country dropdowns (registration, wire requests, etc.). */

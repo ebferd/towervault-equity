@@ -1581,6 +1581,86 @@ class AdminController {
         json_response(['success' => true, 'message' => $msg, 'sent' => $sent, 'failed' => $failed, 'skipped' => $skipped, 'remaining' => array_values($remaining)]);
     }
 
+    // ═══ Market news management ════════════════════════════════
+    public static function news(): void {
+        AuthMiddleware::admin();
+        $posts       = DB::fetchAll("SELECT * FROM news_posts ORDER BY published_at DESC");
+        $feedUrl     = platform_setting('news_rss_url', '');
+        $newsEnabled = platform_setting('news_enabled', '1') === '1';
+        view('admin.news', compact('posts', 'feedUrl', 'newsEnabled'), 'admin');
+    }
+
+    private static function newsData(): array {
+        $expiryDays = (int) input('expiry_days', 7);
+        return [
+            'title'       => sanitize(input('title', '')),
+            'summary'     => sanitize(input('summary', '')),
+            'source_name' => sanitize(input('source_name', '')),
+            'source_url'  => trim((string) input('source_url', '')),
+            'category'    => sanitize(input('category', 'Global')) ?: 'Global',
+            'expiry_days' => $expiryDays,
+        ];
+    }
+
+    public static function storeNews(): void {
+        AuthMiddleware::admin();
+        AuthMiddleware::verifyCsrf();
+        $d = self::newsData();
+        if ($d['title'] === '') json_response(['success' => false, 'error' => 'A headline is required.']);
+        $expires = $d['expiry_days'] > 0 ? date('Y-m-d H:i:s', time() + $d['expiry_days'] * 86400) : null;
+        DB::query(
+            "INSERT INTO news_posts (title, summary, source_name, source_url, category, is_manual, status, published_at, expires_at)
+             VALUES (?,?,?,?,?,1,'published',NOW(),?)",
+            [$d['title'], $d['summary'] ?: null, $d['source_name'] ?: null, $d['source_url'] ?: null, $d['category'], $expires]
+        );
+        audit_log(current_admin_id(), 'news_added', "Added news post: {$d['title']}", 'low', 'platform', null, 'News');
+        json_response(['success' => true, 'message' => 'Post published.']);
+    }
+
+    public static function updateNews(): void {
+        AuthMiddleware::admin();
+        AuthMiddleware::verifyCsrf();
+        $id = (int) ($_GET['id'] ?? 0);
+        if (!DB::fetch("SELECT id FROM news_posts WHERE id=?", [$id])) json_response(['success' => false, 'error' => 'Post not found.']);
+        $d = self::newsData();
+        if ($d['title'] === '') json_response(['success' => false, 'error' => 'A headline is required.']);
+        // expiry_days here re-bases expiry from now; 0 = keep permanently (no auto-remove)
+        $expires = $d['expiry_days'] > 0 ? date('Y-m-d H:i:s', time() + $d['expiry_days'] * 86400) : null;
+        DB::execute(
+            "UPDATE news_posts SET title=?, summary=?, source_name=?, source_url=?, category=?, expires_at=? WHERE id=?",
+            [$d['title'], $d['summary'] ?: null, $d['source_name'] ?: null, $d['source_url'] ?: null, $d['category'], $expires, $id]
+        );
+        audit_log(current_admin_id(), 'news_updated', "Updated news post #{$id}", 'low', 'platform', null, 'News');
+        json_response(['success' => true, 'message' => 'Post updated.']);
+    }
+
+    public static function deleteNews(): void {
+        AuthMiddleware::admin();
+        AuthMiddleware::verifyCsrf();
+        $id = (int) ($_GET['id'] ?? 0);
+        DB::execute("DELETE FROM news_posts WHERE id=?", [$id]);
+        audit_log(current_admin_id(), 'news_deleted', "Deleted news post #{$id}", 'low', 'platform', null, 'News');
+        json_response(['success' => true, 'message' => 'Post removed.']);
+    }
+
+    public static function saveNewsSettings(): void {
+        AuthMiddleware::admin();
+        AuthMiddleware::verifyCsrf();
+        $url = trim((string) input('news_rss_url', ''));
+        $on  = input('news_enabled', '0') === '1' ? '1' : '0';
+        set_platform_setting('news_rss_url', $url, 'general');
+        set_platform_setting('news_enabled', $on, 'general');
+        json_response(['success' => true, 'message' => 'News settings saved.']);
+    }
+
+    public static function fetchNews(): void {
+        AuthMiddleware::admin();
+        AuthMiddleware::verifyCsrf();
+        @set_time_limit(30);
+        $n = news_pull(1);
+        json_response(['success' => true, 'message' => $n > 0 ? "Pulled {$n} new article." : 'No new articles right now — the feed had nothing you don\'t already have.']);
+    }
+
     // ── Reports ────────────────────────────────────────────────
     public static function reports(): void {
         AuthMiddleware::admin();

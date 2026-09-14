@@ -1301,6 +1301,28 @@ class InvestorController {
         exit;
     }
 
+    // ── Market news ────────────────────────────────────────────
+    public static function news(): void {
+        AuthMiddleware::investor();
+        $posts = DB::fetchAll(
+            "SELECT * FROM news_posts WHERE status='published' AND (expires_at IS NULL OR expires_at > NOW())
+             ORDER BY published_at DESC LIMIT 40"
+        );
+        view('investor.news', ['title' => 'Market News', 'posts' => $posts], 'main');
+    }
+
+    public static function newsPost(): void {
+        AuthMiddleware::investor();
+        $id   = (int) ($_GET['id'] ?? 0);
+        $post = DB::fetch("SELECT * FROM news_posts WHERE id=? AND status='published'", [$id]);
+        if (!$post) { http_response_code(404); view('errors.404', ['title' => 'Article not found'], 'main'); return; }
+        $more = DB::fetchAll(
+            "SELECT * FROM news_posts WHERE id<>? AND status='published' AND (expires_at IS NULL OR expires_at > NOW())
+             ORDER BY published_at DESC LIMIT 4", [$id]
+        );
+        view('investor.news_post', ['title' => $post['title'], 'post' => $post, 'more' => $more], 'main');
+    }
+
     // ── Install app page ───────────────────────────────────────
     public static function installApp(): void {
         AuthMiddleware::investor();

@@ -42,6 +42,7 @@ $currentPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $nav = [
   ['section' => 'Overview'],
   ['path' => '/investor/dashboard', 'label' => 'Dashboard', 'icon' => 'grid'],
+  ['path' => '/investor/news', 'label' => 'Market News', 'icon' => 'doc'],
   ['path' => '/investor/how-it-works', 'label' => 'How it works', 'icon' => 'info'],
   ['section' => 'Invest'],
   ['path' => '/investor/investments', 'label' => 'Investments', 'icon' => 'building'],

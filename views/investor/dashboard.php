@@ -468,6 +468,36 @@ function obToggle(){
       </div>
     </div>
 
+    <!-- Market News -->
+    <?php
+      $newsCard = DB::fetchAll("SELECT * FROM news_posts WHERE status='published' AND (expires_at IS NULL OR expires_at > NOW()) ORDER BY published_at DESC LIMIT 4");
+      if ($newsCard): $nLead = $newsCard[0]; $nRest = array_slice($newsCard, 1, 3);
+    ?>
+    <div class="nw-card" style="margin-top:1.25rem">
+      <div class="nw-c-head">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
+        <h3>Market News</h3>
+        <span class="nw-live"><span class="d"></span>Live</span>
+      </div>
+      <a class="nw-lead" href="/investor/news/<?= (int)$nLead['id'] ?>">
+        <div class="<?= news_photo_class($nLead) ?>"><?= news_sky() ?><span class="nw-chip"><?= htmlspecialchars($nLead['category']) ?></span></div>
+        <h4><?= htmlspecialchars($nLead['title']) ?></h4>
+        <div class="m"><?= news_source($nLead) ?><span class="nw-dot"></span><span class="nw-time"><?= time_ago($nLead['published_at']) ?></span></div>
+      </a>
+      <?php if ($nRest): ?>
+      <div class="nw-list">
+        <?php foreach ($nRest as $p): ?>
+          <a class="nw-item" href="/investor/news/<?= (int)$p['id'] ?>">
+            <span class="nw-thumb <?= news_photo_class($p) ?>"></span>
+            <div><h5><?= htmlspecialchars($p['title']) ?></h5><div class="m"><?= news_source($p) ?><span class="nw-dot"></span><?= time_ago($p['published_at']) ?></div></div>
+          </a>
+        <?php endforeach; ?>
+      </div>
+      <?php endif; ?>
+      <a class="nw-foot" href="/investor/news">View all news →</a>
+    </div>
+    <?php endif; ?>
+
   </div>
 </div>
 
