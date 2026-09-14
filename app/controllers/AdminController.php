@@ -1656,9 +1656,9 @@ class AdminController {
     public static function fetchNews(): void {
         AuthMiddleware::admin();
         AuthMiddleware::verifyCsrf();
-        @set_time_limit(30);
-        $n = news_pull(1);
-        json_response(['success' => true, 'message' => $n > 0 ? "Pulled {$n} new article." : 'No new articles right now — the feed had nothing you don\'t already have.']);
+        @set_time_limit(45);
+        $n = news_pull(6); // manual pull grabs several so the page fills at once
+        json_response(['success' => true, 'message' => $n > 0 ? "Pulled {$n} new article(s)." : 'No new articles right now — the feed had nothing you don\'t already have.']);
     }
 
     // ── Reports ────────────────────────────────────────────────
