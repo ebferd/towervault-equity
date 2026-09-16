@@ -17,7 +17,7 @@
     padding:14px 24px;background:rgba(255,255,255,.86);backdrop-filter:blur(12px);border-bottom:1px solid #E3EAE6}
   .pp-brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit}
   .pp-mark{width:34px;height:34px;border-radius:9px;background:#059669;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;box-shadow:0 6px 16px -6px rgba(5,150,105,.6)}
-  .pp-mark img{width:34px;height:34px;border-radius:9px;object-fit:contain}
+  .pp-logo{height:36px;width:auto;max-width:190px;object-fit:contain;display:block}
   .pp-name{font-weight:700;font-size:15px;letter-spacing:-.2px}
   .pp-actions{display:flex;align-items:center;gap:9px}
   .pp-btn{display:inline-flex;align-items:center;height:38px;padding:0 16px;border-radius:9px;font-size:13px;font-weight:600;text-decoration:none;border:1px solid transparent;white-space:nowrap}
@@ -39,15 +39,20 @@
   $pName = platform_setting('platform_name', 'NexVest');
   $pInit = platform_setting('platform_initials', 'N');
   $pLogo = platform_setting('platform_logo', '');
+  // Marketing homepage: strip protocol and any app subdomain (equity./app./…)
+  // from the configured website so we link to the main site, not the portal.
+  $home = preg_replace('#^https?://#i', '', rtrim((string) platform_setting('platform_website', ''), '/'));
+  $home = preg_replace('#^(equity|app|portal|dashboard|my|invest)\.#i', '', $home);
+  $home = $home !== '' ? 'https://' . $home : 'https://towervaultequity.com';
 ?>
 <nav class="pp-nav">
-  <a class="pp-brand" href="/">
-    <?php if ($pLogo): ?><span class="pp-mark"><img src="<?= file_url($pLogo) ?>" alt=""/></span>
+  <a class="pp-brand" href="<?= htmlspecialchars($home) ?>">
+    <?php if ($pLogo): ?><img class="pp-logo" src="<?= file_url($pLogo) ?>" alt="<?= htmlspecialchars($pName) ?>"/>
     <?php else: ?><span class="pp-mark"><?= htmlspecialchars($pInit) ?></span><?php endif; ?>
     <span class="pp-name"><?= htmlspecialchars($pName) ?></span>
   </a>
   <div class="pp-actions">
-    <a class="pp-btn ghost" href="/">Homepage</a>
+    <a class="pp-btn ghost" href="<?= htmlspecialchars($home) ?>">Homepage</a>
     <a class="pp-btn ghost pp-hide-sm" href="/login">Sign in</a>
     <a class="pp-btn solid" href="/register">Create account</a>
   </div>
