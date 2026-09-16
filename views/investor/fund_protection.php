@@ -1,12 +1,12 @@
 <?php
-/* views/investor/fund_protection.php — public + in-dashboard legal page */
+/* views/investor/fund_protection.php : public + dashboard legal page */
   $brand   = $brand   ?? platform_setting('platform_name', 'NexVest');
   $support = $support ?? platform_setting('platform_support_email', platform_setting('platform_email', ''));
   $sym     = $sym     ?? platform_setting('platform_symbol', '$');
   $addr    = platform_setting('platform_address', '');
   $isPublic = $isPublic ?? false;
-  $effDate = date('j F Y');
-  $docRef  = 'FP-' . date('Y') . '-01';
+  $effDate = '13 March 2023';
+  $docRef  = 'FP.2023.01';
   $pct     = 45;                         // protected percentage
   $circ    = 2 * M_PI * 52;              // ring circumference (r=52)
   $dash    = round($circ * $pct / 100, 1);
@@ -18,7 +18,7 @@
     --navy:#0B1120; --navy-2:#14213A; --gold:#C9A24B;
     --ink:#0E1B15; --muted:#55635B; --faint:#8B988F; --line:#E3EAE6; --soft:#F6F9F7; --paper:#fff;
     --shadow:0 1px 2px rgba(11,17,32,.04),0 20px 46px -26px rgba(11,17,32,.22);
-    color:var(--ink); max-width:920px; margin:0 auto;
+    color:var(--ink); max-width:920px; margin:0 auto; padding-top:18px;
   }
   .fp *{box-sizing:border-box}
   .fp h1,.fp h2,.fp h3,.fp h4{margin:0}
@@ -139,7 +139,7 @@
   <header>
     <span class="fp-eyebrow"><span class="ln"></span>Investor Protection Policy</span>
     <h1 class="fp-title">Fund Protection</h1>
-    <p class="fp-sub">This policy sets out how <?= $ex($brand) ?> safeguards the money you invest — how your capital is ring-fenced and used strictly for its intended purpose, and how a guaranteed portion of every investment is protected under our Capital Protection commitment.</p>
+    <p class="fp-sub">This policy sets out how <?= $ex($brand) ?> safeguards the money you invest. It explains how your capital is kept separate and used strictly for its intended purpose, and how a guaranteed portion of every investment is protected under our Capital Protection commitment.</p>
     <div class="fp-meta">
       <span class="fp-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Effective&nbsp;<b><?= $ex($effDate) ?></b></span>
       <span class="fp-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Document&nbsp;<b><?= $ex($docRef) ?></b></span>
@@ -160,11 +160,11 @@
     <div class="ht">
       <div class="hk">Capital Protection Guarantee</div>
       <h2>A guaranteed <?= $pct ?>% of your invested capital is protected.</h2>
-      <p>Every investment placed through <?= $ex($brand) ?> is insured up to <?= $pct ?>% of the capital committed. In the event an investment does not go as planned, a guaranteed <?= $pct ?>% of your invested capital is refunded to you — independent of the project's outcome.</p>
+      <p>Every investment placed through <?= $ex($brand) ?> is insured up to <?= $pct ?>% of the capital committed. In the event an investment does not go as planned, a guaranteed <?= $pct ?>% of your invested capital is refunded to you, whatever the project's outcome.</p>
       <div class="tags">
         <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Insured up to <?= $pct ?>%</span>
-        <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 4 8 8 10 4-2 8-5 8-10V6z"/></svg>Ring-fenced funds</span>
-        <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Purpose-bound use</span>
+        <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 4 8 8 10 4-2 8-5 8-10V6z"/></svg>Segregated funds</span>
+        <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Used for your project</span>
       </div>
     </div>
   </section>
@@ -179,14 +179,14 @@
     <div class="fp-pill">
       <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 4 8 8 10 4-2 8-5 8-10V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
       <h3><?= $pct ?>% capital protection</h3>
-      <p>Should an investment underperform or fail, you are guaranteed the return of <b><?= $pct ?>% of your invested capital</b> under our protection commitment — a floor beneath your downside.</p>
+      <p>Should an investment underperform or fail, you are guaranteed the return of <b><?= $pct ?>% of your invested capital</b> under our protection commitment, a floor beneath your downside.</p>
     </div>
   </div>
 
   <!-- Legal document -->
   <article class="fp-paper">
     <div class="fp-paper-hd">
-      <span class="t"><?= $ex(strtoupper($brand)) ?> — FUND PROTECTION POLICY</span>
+      <span class="t"><?= $ex(strtoupper($brand)) ?> · FUND PROTECTION POLICY</span>
       <span class="r">Ref <?= $ex($docRef) ?> · v1.0</span>
     </div>
     <div class="fp-body">
@@ -198,8 +198,8 @@
       </section>
 
       <section class="fp-clause">
-        <h3><span class="no">2.</span>Segregation and ring-fencing of investor funds</h3>
-        <p>Investor capital is <b>ring-fenced</b> and allocated exclusively to the opportunity for which it was invested. Your funds are recorded against your position and directed only to the underlying purpose of that specific project.</p>
+        <h3><span class="no">2.</span>Segregation of investor funds</h3>
+        <p>Investor capital is <b>kept separate</b> and allocated exclusively to the opportunity for which it was invested. Your funds are recorded against your position and directed only to the underlying purpose of that specific project.</p>
         <div class="sub">
           <p><b class="n">2.1</b>Investor funds are <b>not</b> used to finance the Company's own operations, salaries, marketing, administrative overheads, or any activity unrelated to the project you funded.</p>
           <p><b class="n">2.2</b>Investor funds are <b>not</b> commingled with the Company's operating accounts and are not used to meet the obligations of other, unrelated projects.</p>
@@ -209,12 +209,12 @@
 
       <section class="fp-clause">
         <h3><span class="no">3.</span>The <?= $pct ?>% Capital Protection Guarantee</h3>
-        <p>Every investment is protected — insured up to <b><?= $pct ?>% of the capital committed</b> — under the Company's Capital Protection commitment (the "Guarantee").</p>
+        <p>Every investment is protected and insured up to <b><?= $pct ?>% of the capital committed</b> under the Company's Capital Protection commitment (the "Guarantee").</p>
         <div class="sub">
-          <p><b class="n">3.1</b>If an investment does not go as planned — including where the underlying project underperforms, is unwound, or fails to return the expected capital — you are guaranteed a refund of <b><?= $pct ?>% of your invested capital</b> for that position.</p>
+          <p><b class="n">3.1</b>If an investment does not go as planned, including where the underlying project underperforms, is unwound, or fails to return the expected capital, you are guaranteed a refund of <b><?= $pct ?>% of your invested capital</b> for that position.</p>
           <p><b class="n">3.2</b>The Guarantee is calculated on the principal capital you committed to the affected position, before any returns already paid to you.</p>
           <p><b class="n">3.3</b>The protected amount is credited to your <?= $ex($brand) ?> wallet, from which it may be withdrawn or reinvested, subject to standard verification.</p>
-          <p><b class="n">3.4</b>The Guarantee is a minimum protected floor. Where a project performs and settles in full, you receive the full capital and returns due under that opportunity's terms — the Guarantee does not cap your recovery.</p>
+          <p><b class="n">3.4</b>The Guarantee is a minimum protected floor. Where a project performs and settles in full, you receive the full capital and returns due under that opportunity's terms, and the Guarantee does not cap your recovery.</p>
         </div>
       </section>
 
@@ -235,7 +235,7 @@
         <table class="fp-tbl">
           <thead><tr><th style="width:42%">Item</th><th>Position under this Policy</th></tr></thead>
           <tbody>
-            <tr><td>Use of your funds</td><td><span class="yes">Ring-fenced</span> — used solely for the project you invested in.</td></tr>
+            <tr><td>Use of your funds</td><td><span class="yes">Segregated</span>, used solely for the project you invested in.</td></tr>
             <tr><td>Protected capital</td><td><span class="yes"><?= $pct ?>% guaranteed</span> refund of principal if the investment does not go as planned.</td></tr>
             <tr><td>Returns / profit</td><td>Targeted per each opportunity's terms; <span class="no">not guaranteed</span> and may vary.</td></tr>
             <tr><td>Capital above <?= $pct ?>%</td><td>Remains <span class="no">at risk</span> and is subject to the outcome of the project.</td></tr>
@@ -245,13 +245,13 @@
       </section>
 
       <section class="fp-clause">
-        <h3><span class="no">6.</span>Custody, oversight &amp; record-keeping</h3>
+        <h3><span class="no">6.</span>Custody, oversight and records</h3>
         <p>Positions, transactions and certificates are recorded and retained so that every allocation of investor capital and every protected refund can be independently reconciled. You can review your positions, transaction history and certificates at any time from your dashboard.</p>
       </section>
 
       <section class="fp-clause">
         <h3><span class="no">7.</span>Making a claim &amp; contact</h3>
-        <p>In most cases the protection is applied automatically when a protected event is confirmed — no action is needed from you. If you believe a protected event has occurred and has not been actioned, contact us and we will review your position.</p>
+        <p>In most cases the protection is applied automatically when a protected event is confirmed, so no action is needed from you. If you believe a protected event has occurred and has not been actioned, contact us and we will review your position.</p>
         <?php if ($support): ?><p>Support: <b style="color:var(--em-deep)"><?= $ex($support) ?></b></p><?php endif; ?>
         <?php if ($addr): ?><p style="color:var(--faint);font-size:12.5px"><?= $ex($addr) ?></p><?php endif; ?>
       </section>
@@ -273,7 +273,7 @@
   <section class="fp-cta">
     <div class="ct">
       <h3>Invest with a protected floor.</h3>
-      <p>Create your account to browse opportunities — each with clear terms and <?= $pct ?>% capital protection.</p>
+      <p>Create your account to browse opportunities, each with clear terms and <?= $pct ?>% capital protection.</p>
     </div>
     <div class="btns">
       <a class="p" href="/register">Create account</a>

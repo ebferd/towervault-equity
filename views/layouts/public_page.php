@@ -25,13 +25,13 @@
   .pp-btn.ghost:hover{border-color:#cdd8d1}
   .pp-btn.solid{background:#059669;color:#fff;box-shadow:0 10px 22px -12px rgba(5,150,105,.7)}
   .pp-btn.solid:hover{background:#047857}
-  .pp-wrap{max-width:1000px;margin:0 auto;padding:30px 20px 20px}
+  .pp-wrap{max-width:1000px;margin:0 auto;padding:52px 20px 20px}
   .pp-foot{max-width:1000px;margin:0 auto;padding:26px 20px 44px;border-top:1px solid #E3EAE6;margin-top:26px;
     display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between;font-size:12px;color:#8B988F}
   .pp-foot a{color:#55635B;text-decoration:none;font-weight:500}
   .pp-foot a:hover{color:#047857}
   .pp-foot .lx{display:flex;gap:16px;flex-wrap:wrap}
-  @media(max-width:560px){.pp-name{display:none}.pp-wrap{padding:18px 12px}.pp-btn.ghost{display:none}}
+  @media(max-width:560px){.pp-name{display:none}.pp-wrap{padding:34px 12px 18px}.pp-btn.pp-hide-sm{display:none}.pp-btn{height:36px;padding:0 13px;font-size:12.5px}}
 </style>
 </head>
 <body>
@@ -47,7 +47,8 @@
     <span class="pp-name"><?= htmlspecialchars($pName) ?></span>
   </a>
   <div class="pp-actions">
-    <a class="pp-btn ghost" href="/login">Sign in</a>
+    <a class="pp-btn ghost" href="/">Homepage</a>
+    <a class="pp-btn ghost pp-hide-sm" href="/login">Sign in</a>
     <a class="pp-btn solid" href="/register">Create account</a>
   </div>
 </nav>
