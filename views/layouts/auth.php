@@ -32,11 +32,10 @@ $authStats = [
   <aside class="brand">
     <div class="brand-logo">
       <?php if ($pLogo): ?>
-        <img src="<?= file_url($pLogo) ?>" alt="<?= htmlspecialchars($pName) ?>" style="width:38px;height:38px;object-fit:contain;border-radius:9px;flex-shrink:0"/>
+        <img src="<?= file_url($pLogo) ?>" alt="<?= htmlspecialchars($pName) ?>" style="height:56px;width:auto;max-width:210px;object-fit:contain;border-radius:10px;flex-shrink:0"/>
       <?php else: ?>
         <div class="logo-mark"><?= htmlspecialchars($pInit) ?></div>
       <?php endif; ?>
-      <span class="logo-word"><?= htmlspecialchars($pName) ?></span>
     </div>
 
     <div class="brand-mid">
@@ -75,11 +74,10 @@ $authStats = [
     <div class="panel-top">
       <div class="mobile-bar">
         <?php if ($pLogo): ?>
-          <img src="<?= file_url($pLogo) ?>" alt="<?= htmlspecialchars($pName) ?>" style="width:30px;height:30px;object-fit:contain;border-radius:8px;flex-shrink:0"/>
+          <img src="<?= file_url($pLogo) ?>" alt="<?= htmlspecialchars($pName) ?>" style="height:46px;width:auto;max-width:180px;object-fit:contain;border-radius:9px;flex-shrink:0"/>
         <?php else: ?>
           <div class="mobile-logo"><?= htmlspecialchars($pInit) ?></div>
         <?php endif; ?>
-        <span class="mobile-word"><?= htmlspecialchars($pName) ?></span>
       </div>
 
       <div class="utility-row">

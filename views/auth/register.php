@@ -2,7 +2,6 @@
 $countries = country_list();
 $refCode = htmlspecialchars($_GET['ref'] ?? '');
 ?>
-<p class="card-eyebrow">New investor</p>
 <h2 class="card-title">Create your account</h2>
 <p class="card-sub">Start building your portfolio in a few minutes.</p>
 
