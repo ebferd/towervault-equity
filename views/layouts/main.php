@@ -44,6 +44,7 @@ $nav = [
   ['path' => '/investor/dashboard', 'label' => 'Dashboard', 'icon' => 'grid'],
   ['path' => '/investor/news', 'label' => 'Market News', 'icon' => 'doc'],
   ['path' => '/investor/how-it-works', 'label' => 'How it works', 'icon' => 'info'],
+  ['path' => '/investor/fund-protection', 'label' => 'Fund protection', 'icon' => 'shield'],
   ['section' => 'Invest'],
   ['path' => '/investor/investments', 'label' => 'Investments', 'icon' => 'building'],
   ['path' => '/investor/portfolio', 'label' => 'Portfolio', 'icon' => 'briefcase'],

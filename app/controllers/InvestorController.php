@@ -1264,6 +1264,23 @@ class InvestorController {
         }
     }
 
+    // ── Fund Protection (public + in-dashboard) ────────────────
+    // Shareable to logged-out visitors (standalone shell) and shown inside
+    // the dashboard chrome for signed-in investors — same URL for both.
+    public static function fundProtection(): void {
+        $data = [
+            'title'   => 'Fund Protection',
+            'brand'   => platform_setting('platform_name', 'NexVest'),
+            'support' => platform_setting('platform_support_email', platform_setting('platform_email', '')),
+            'sym'     => platform_setting('platform_symbol', '$'),
+        ];
+        if (is_logged_in()) {
+            view('investor.fund_protection', $data + ['isPublic' => false], 'main');
+        } else {
+            view('investor.fund_protection', $data + ['isPublic' => true], 'public_page');
+        }
+    }
+
     public static function terms(): void {
         $content = platform_setting('legal_terms', '');
         $name    = platform_setting('platform_name', 'NexVest');
