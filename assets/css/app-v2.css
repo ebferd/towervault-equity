@@ -37,7 +37,7 @@ body{font-family:'Inter',sans-serif;color:var(--mist-900);background:var(--mist-
 
 .sidebar{width:248px;background:var(--ink-900);color:#fff;display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;height:100vh;z-index:40;transition:transform .25s ease;overflow:hidden}
 .sb-logo{display:flex;align-items:center;gap:10px;padding:1.25rem 1.25rem 1rem;flex-shrink:0}
-.logo-mark{width:30px;height:30px;border-radius:8px;background:var(--em-500);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:600;font-size:14px;color:var(--ink-950);flex-shrink:0}
+.logo-mark{width:46px;height:46px;border-radius:11px;background:var(--em-500);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:600;font-size:20px;color:var(--ink-950);flex-shrink:0}
 .sb-name{font-size:14.5px;font-weight:600;letter-spacing:-.2px}
 .sb-nav{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:.5rem .75rem;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.25) transparent}
 .sb-nav::-webkit-scrollbar{width:8px}

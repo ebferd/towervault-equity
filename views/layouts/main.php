@@ -68,11 +68,10 @@ $nav = [
   <nav class="sidebar" id="sidebar">
     <div class="sb-logo">
       <?php if ($pLogo): ?>
-        <img src="<?= file_url($pLogo) ?>" alt="" style="width:30px;height:30px;object-fit:contain;border-radius:8px"/>
+        <img src="<?= file_url($pLogo) ?>" alt="<?= htmlspecialchars($pName) ?>" style="height:46px;width:auto;max-width:180px;object-fit:contain;filter:brightness(0) invert(1)"/>
       <?php else: ?>
         <div class="logo-mark"><?= htmlspecialchars($pInit) ?></div>
       <?php endif; ?>
-      <span class="sb-name"><?= htmlspecialchars($pName) ?></span>
     </div>
 
     <div class="sb-nav">
