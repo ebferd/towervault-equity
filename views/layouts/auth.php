@@ -82,7 +82,6 @@ $authStats = [
 
       <div class="utility-row">
         <?php $langVariant='light'; include ROOT.'/views/components/lang_switcher.php'; ?>
-        <a href="mailto:<?= htmlspecialchars(platform_setting('platform_support_email', platform_setting('platform_email','support@nexvest.com'))) ?>" class="help-link">Need help?</a>
       </div>
     </div>
 
