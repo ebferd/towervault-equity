@@ -32,7 +32,9 @@ $userName  = $_SESSION['user_name']  ?? 'Investor';
 $userEmail = $_SESSION['user_email'] ?? '';
 $nameParts = preg_split('/\s+/', trim($userName));
 $userInit  = strtoupper(substr($nameParts[0] ?? 'I', 0, 1) . substr($nameParts[1] ?? '', 0, 1));
-$balance   = (float)((DB::fetch("SELECT wallet_balance FROM users WHERE id=?", [$uid]) ?? [])['wallet_balance'] ?? 0);
+$me        = DB::fetch("SELECT wallet_balance, avatar FROM users WHERE id=?", [$uid]) ?? [];
+$balance   = (float)($me['wallet_balance'] ?? 0);
+$userAvatar = $me['avatar'] ?? ($_SESSION['user_avatar'] ?? '');
 $unread    = (int)((DB::fetch("SELECT COUNT(*) AS c FROM notifications WHERE user_id=? AND is_read=0", [$uid]) ?? [])['c'] ?? 0);
 $notifPreview = DB::fetchAll("SELECT * FROM notifications WHERE user_id=? ORDER BY created_at DESC LIMIT 4", [$uid]);
 $isGhost   = $_SESSION['is_ghost'] ?? false;
@@ -92,7 +94,7 @@ $nav = [
 
     <div class="sb-bottom">
       <a href="/investor/profile" class="sb-user">
-        <div class="sb-avatar"><?= htmlspecialchars($userInit) ?></div>
+        <div class="sb-avatar"><?php if ($userAvatar): ?><img src="<?= file_url($userAvatar) ?>" alt=""/><?php else: ?><?= htmlspecialchars($userInit) ?><?php endif; ?></div>
         <div style="min-width:0">
           <div class="sb-uname"><?= htmlspecialchars($userName) ?></div>
           <div class="sb-uemail"><?= htmlspecialchars($userEmail) ?></div>
@@ -147,7 +149,7 @@ $nav = [
           <span class="tb-balance-lbl">Balance</span>
           <span class="tb-balance-val"><?= fmt_currency($balance) ?></span>
         </a>
-        <a href="/investor/profile" class="tb-avatar"><?= htmlspecialchars($userInit) ?></a>
+        <a href="/investor/profile" class="tb-avatar"><?php if ($userAvatar): ?><img src="<?= file_url($userAvatar) ?>" alt=""/><?php else: ?><?= htmlspecialchars($userInit) ?><?php endif; ?></a>
       </div>
     </header>
 

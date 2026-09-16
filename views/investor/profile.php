@@ -1,7 +1,15 @@
 <?php /* Profile — $user, $sessions */ ?>
 <style>
 .prof-hero{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;background:#fff;border:1px solid var(--mist-200);border-radius:16px;padding:1.25rem 1.4rem;margin-bottom:1rem}
-.prof-av{width:56px;height:56px;border-radius:50%;background:var(--em-600);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;flex-shrink:0}
+.prof-av-wrap{position:relative;flex-shrink:0;width:56px;height:56px}
+.prof-av{width:56px;height:56px;border-radius:50%;background:var(--em-600);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden}
+.prof-av img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}
+.prof-av-cam{position:absolute;right:-3px;bottom:-3px;width:24px;height:24px;border-radius:50%;border:2px solid #fff;background:var(--mist-900);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;transition:background .15s}
+.prof-av-cam:hover{background:var(--em-600)}
+.prof-av-cam:disabled{opacity:.6;cursor:default}
+.prof-av-cam svg{width:12px;height:12px}
+.prof-av-remove{font-size:11.5px;color:var(--mist-400);text-decoration:none;font-weight:500}
+.prof-av-remove:hover{color:var(--red-700)}
 .prof-av-info{flex:1;min-width:160px}
 .prof-av-name{font-size:17px;font-weight:700;color:var(--mist-900)}
 .prof-av-email{font-size:13px;color:var(--mist-400);margin-top:2px;word-break:break-all}
@@ -44,7 +52,20 @@
 
 <!-- Hero -->
 <div class="prof-hero">
-  <div class="prof-av"><?= strtoupper(substr($user['first_name'],0,1).substr($user['last_name'],0,1)) ?></div>
+  <?php $avInitials = strtoupper(substr($user['first_name'],0,1).substr($user['last_name'],0,1)); ?>
+  <div class="prof-av-wrap">
+    <div class="prof-av" id="prof-av">
+      <?php if (!empty($user['avatar'])): ?>
+        <img src="<?= file_url($user['avatar']) ?>" alt="Profile picture"/>
+      <?php else: ?>
+        <?= htmlspecialchars($avInitials) ?>
+      <?php endif; ?>
+    </div>
+    <button type="button" class="prof-av-cam" id="prof-av-cam" aria-label="Change profile picture" title="Change profile picture">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    </button>
+    <input type="file" id="prof-av-input" accept="image/png,image/jpeg,image/webp" hidden/>
+  </div>
   <div class="prof-av-info">
     <div class="prof-av-name"><?= htmlspecialchars($user['first_name'].' '.$user['last_name']) ?></div>
     <div class="prof-av-email"><?= htmlspecialchars($user['email']) ?></div>
@@ -53,6 +74,7 @@
       <?php if ($user['two_fa_enabled']): ?>
       <span class="badge" style="background:#eff6ff;color:#1e40af">2FA On</span>
       <?php endif; ?>
+      <a href="#" class="prof-av-remove" id="prof-av-remove" style="<?= empty($user['avatar']) ? 'display:none' : '' ?>">Remove photo</a>
     </div>
   </div>
   <div class="prof-stats">
@@ -264,4 +286,60 @@ document.getElementById('pwd-form').addEventListener('submit', async e => {
     : `<div class="alert-banner err" style="margin-bottom:.75rem"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>${data.error}</span></div>`;
   if (data.success) e.target.reset();
 });
+
+// ── Profile picture upload / remove ──
+(function () {
+  const cam    = document.getElementById('prof-av-cam');
+  const input  = document.getElementById('prof-av-input');
+  const av      = document.getElementById('prof-av');
+  const removeB = document.getElementById('prof-av-remove');
+  const initials = <?= json_encode($avInitials) ?>;
+  if (!cam || !input || !av) return;
+
+  function paintLayout(html) {
+    document.querySelectorAll('.tb-avatar, .sb-avatar').forEach(el => { el.innerHTML = html; });
+  }
+
+  cam.addEventListener('click', () => input.click());
+
+  input.addEventListener('change', async () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) { alert('Please choose a PNG, JPG or WebP image.'); input.value=''; return; }
+    if (file.size > 5 * 1024 * 1024) { alert('Image must be under 5MB.'); input.value=''; return; }
+
+    cam.disabled = true;
+    const fd = new FormData();
+    fd.append('avatar', file);
+    const data = await post('/investor/profile/avatar', fd, true);
+    cam.disabled = false;
+    input.value = '';
+
+    if (data.success && data.avatar) {
+      const img = '<img src="' + data.avatar + '?t=' + Date.now() + '" alt="Profile picture"/>';
+      av.innerHTML = img;
+      paintLayout(img);
+      if (removeB) removeB.style.display = '';
+    } else {
+      alert(data.error || 'Upload failed. Please try again.');
+    }
+  });
+
+  if (removeB) {
+    removeB.addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (!confirm('Remove your profile picture?')) return;
+      const fd = new FormData();
+      fd.append('remove', '1');
+      const data = await post('/investor/profile/avatar', fd, true);
+      if (data.success) {
+        av.textContent = initials;
+        paintLayout(initials);
+        removeB.style.display = 'none';
+      } else {
+        alert(data.error || 'Could not remove picture.');
+      }
+    });
+  }
+})();
 </script>

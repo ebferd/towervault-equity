@@ -1476,6 +1476,37 @@ JS;
         json_response(['success' => true, 'message' => 'Profile updated successfully.']);
     }
 
+    // Upload / remove the investor's profile picture.
+    public static function uploadAvatar(): void {
+        AuthMiddleware::investor();
+        AuthMiddleware::verifyCsrf();
+        $uid  = current_user_id();
+        $user = DB::fetch("SELECT avatar FROM users WHERE id=?", [$uid]);
+        $old  = $user['avatar'] ?? '';
+
+        // Remove existing picture
+        if (($_POST['remove'] ?? '') === '1') {
+            if ($old) { @unlink(ROOT . '/' . ltrim(str_replace('\\', '/', $old), '/')); }
+            DB::execute("UPDATE users SET avatar=NULL, updated_at=NOW() WHERE id=?", [$uid]);
+            unset($_SESSION['user_avatar']);
+            json_response(['success' => true, 'message' => 'Profile picture removed.', 'avatar' => null]);
+        }
+
+        if (empty($_FILES['avatar']) || ($_FILES['avatar']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+            json_response(['success' => false, 'error' => 'Please choose an image to upload.']);
+        }
+
+        $path = upload_file($_FILES['avatar'], 'uploads/avatars', ['jpg', 'jpeg', 'png', 'webp']);
+        if ($path === false) {
+            json_response(['success' => false, 'error' => 'Upload failed. Please use a JPG, PNG or WebP image under 5MB.']);
+        }
+
+        if ($old) { @unlink(ROOT . '/' . ltrim(str_replace('\\', '/', $old), '/')); }
+        DB::execute("UPDATE users SET avatar=?, updated_at=NOW() WHERE id=?", [$path, $uid]);
+        $_SESSION['user_avatar'] = $path;
+        json_response(['success' => true, 'message' => 'Profile picture updated.', 'avatar' => file_url($path)]);
+    }
+
     public static function changePassword(): void {
         AuthMiddleware::investor();
         AuthMiddleware::verifyCsrf();

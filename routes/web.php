@@ -120,6 +120,7 @@ Router::post('/investor/support/reply',  [InvestorController::class, 'replyTicke
 Router::get('/investor/profile',         [InvestorController::class, 'profile']);
 Router::post('/investor/profile',        [InvestorController::class, 'updateProfile']);
 Router::post('/investor/profile/password',[InvestorController::class, 'changePassword']);
+Router::post('/investor/profile/avatar',  [InvestorController::class, 'uploadAvatar']);
 Router::get('/investor/referrals',       [InvestorController::class, 'referrals']);
 Router::get('/investor/certificates',    [InvestorController::class, 'certificates']);
 Router::get('/investor/certificate/{ref}',[InvestorController::class, 'downloadCertificate']);
