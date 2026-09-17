@@ -434,7 +434,7 @@ textarea.fi{height:auto;padding:12px 14px;resize:vertical;min-height:90px}
 .nw-dot{width:3px;height:3px;border-radius:50%;background:var(--mist-300,#b6bfba);flex-shrink:0;display:inline-block}
 
 /* dashboard card */
-.nw-card{background:#fff;border:1px solid var(--mist-200,#E3EAE6);border-radius:16px;overflow:hidden}
+.nw-card{background:#fff;border:1px solid var(--mist-200,#E3EAE6);border-radius:16px;overflow:hidden;container-type:inline-size}
 .nw-c-head{display:flex;align-items:center;gap:9px;padding:16px 18px 13px}
 .nw-c-head .ic{width:28px;height:28px;border-radius:8px;background:var(--em-50,#ECFDF5);color:var(--em-700,#047857);display:flex;align-items:center;justify-content:center}
 .nw-c-head .ic svg{width:15px;height:15px}
@@ -454,6 +454,18 @@ textarea.fi{height:auto;padding:12px 14px;resize:vertical;min-height:90px}
 .nw-item h5{font-size:12.8px;font-weight:600;line-height:1.35;margin:0 0 6px;color:var(--mist-900,#0E1B15)}
 .nw-item .m{display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--mist-400,#8B988F)}
 .nw-foot{display:block;text-align:center;padding:13px;border-top:1px solid var(--mist-100,#EEF2EF);font-size:12.5px;font-weight:600;color:var(--em-700,#047857);text-decoration:none}
+
+/* Dashboard news card — adapt to its own width (e.g. when it spans full width
+   in the single-column layout) instead of stretching into a letterbox strip. */
+@container (min-width:470px){
+  .nw-lead{display:grid;grid-template-columns:44% 1fr;grid-template-rows:auto auto;column-gap:18px;align-content:center;padding:4px 18px 16px}
+  .nw-lead .nw-photo{grid-row:1 / span 2;height:100%;min-height:158px;margin:0;align-self:stretch}
+  .nw-lead h4{grid-column:2;align-self:end;margin:0 0 8px;font-size:16.5px}
+  .nw-lead .m{grid-column:2;align-self:start}
+  .nw-list{display:grid;grid-template-columns:1fr 1fr;column-gap:24px;padding:6px 18px 10px}
+  .nw-item{border-top:none;border-bottom:1px solid var(--mist-100,#EEF2EF)}
+  .nw-item:nth-last-child(-n+2){border-bottom:none}
+}
 
 /* news page */
 .nw-page-hd{margin-bottom:22px}

@@ -30,17 +30,22 @@ $txLabels = [
 .db-date { font-size: 12.5px; color: var(--mist-400); margin-top: .25rem; font-weight: 500; }
 .db-hdr-actions { display: flex; gap: .6rem; }
 
-/* ── Stat row ────────────────────────────────────────────── */
-.db-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--mist-100); border: 1px solid var(--mist-100); border-radius: 14px; overflow: hidden; }
-@media(max-width:860px) { .db-stats { grid-template-columns: 1fr 1fr; } }
-@media(max-width:400px) { .db-stats { grid-template-columns: 1fr 1fr; } }
+/* ── Balance cards ───────────────────────────────────────── */
+.db-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media(max-width:560px) { .db-stats { grid-template-columns: 1fr; } }
 
-.db-stat { background: #fff; padding: 1.25rem 1.4rem; }
-.db-stat-lbl { font-size: 11px; font-weight: 600; color: var(--mist-400); letter-spacing: .03em; margin-bottom: .5rem; }
-.db-stat-val { font-size: 1.5rem; font-weight: 900; color: var(--mist-900); letter-spacing: -.5px; line-height: 1; }
-.db-stat-val.em { color: var(--em-600); }
-.db-stat-sub { font-size: 11.5px; color: var(--mist-400); margin-top: .35rem; }
-.db-stat-sub.up { color: var(--em-600); }
+.db-stat { position: relative; background: #fff; border: 1px solid var(--mist-100); border-radius: 16px; padding: 1.5rem 1.6rem; overflow: hidden; box-shadow: 0 1px 2px rgba(11,17,32,.03); }
+.db-stat.accent { background: linear-gradient(145deg, #10233a 0%, #0B1120 60%); border-color: transparent; }
+.db-stat.accent::after { content:''; position:absolute; right:-30px; top:-40px; width:150px; height:150px; border-radius:50%; background: radial-gradient(circle, rgba(16,185,129,.22), transparent 70%); pointer-events:none; }
+.db-stat-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.15rem; position: relative; z-index: 1; }
+.db-stat-lbl { font-size: 11px; font-weight: 700; color: var(--mist-400); letter-spacing: .08em; text-transform: uppercase; }
+.db-stat.accent .db-stat-lbl { color: rgba(255,255,255,.5); }
+.db-stat-ic { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: var(--em-50); color: var(--em-600); }
+.db-stat.accent .db-stat-ic { background: rgba(255,255,255,.09); color: #34D399; }
+.db-stat-val { font-size: 2.05rem; font-weight: 800; color: var(--mist-900); letter-spacing: -.8px; line-height: 1; font-variant-numeric: tabular-nums; position: relative; z-index: 1; }
+.db-stat.accent .db-stat-val { color: #fff; }
+.db-stat-sub { font-size: 12px; color: var(--mist-400); margin-top: .6rem; position: relative; z-index: 1; }
+.db-stat.accent .db-stat-sub { color: rgba(255,255,255,.5); }
 
 /* ── Two-column layout ───────────────────────────────────── */
 .db-cols { display: grid; grid-template-columns: 1fr 340px; gap: 1.25rem; align-items: start; }
@@ -62,24 +67,30 @@ $txLabels = [
 .db-period-tabs { display: flex; gap: 2px; background: var(--mist-100); border-radius: 7px; padding: 3px; }
 .db-ptab { height: 26px; padding: 0 11px; border-radius: 5px; font-size: 11.5px; font-weight: 600; color: var(--mist-500); background: none; border: none; cursor: pointer; font-family: inherit; transition: background .12s, color .12s; }
 .db-ptab.active { background: #fff; color: var(--mist-900); box-shadow: 0 1px 3px rgba(11,17,32,.07); }
-.db-chart-wrap { height: 188px; padding: .25rem 0 0; }
+.db-chart-wrap { height: 214px; padding: .25rem 0 0; }
 
 /* ── Holdings list ───────────────────────────────────────── */
-.db-holding { display: grid; grid-template-columns: 1fr auto; gap: .75rem 1rem; align-items: center; padding: .9rem 1.4rem; border-top: 1px solid var(--mist-50); transition: background .12s; text-decoration: none; color: inherit; }
-@media(max-width:480px) { .db-holding { grid-template-columns: 1fr; } .dbh-right { display: flex; gap: .75rem; align-items: center; } .dbh-right .dbh-roi { margin-top: 0; } }
+.db-holding { display: flex; gap: 14px; align-items: center; padding: 1.05rem 1.4rem; border-top: 1px solid var(--mist-50); transition: background .12s; text-decoration: none; color: inherit; }
 .db-holding:hover { background: var(--mist-50); }
 .db-holding:first-of-type { border-top: none; }
-.dbh-name { font-size: 13.5px; font-weight: 600; color: var(--mist-900); margin-bottom: .25rem; }
-.dbh-row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.dbh-ic { width: 42px; height: 42px; border-radius: 11px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.dbh-ic svg { width: 20px; height: 20px; }
+.dbh-ic.real_estate { background: #ecfdf5; color: #059669; }
+.dbh-ic.index_fund  { background: #eff6ff; color: #2563eb; }
+.dbh-main { flex: 1; min-width: 0; }
+.dbh-name { font-size: 13.8px; font-weight: 600; color: var(--mist-900); margin-bottom: .3rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dbh-row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; margin-bottom: .6rem; }
 .dbh-pill { font-size: 9.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: .2rem .55rem; border-radius: 20px; }
 .dbh-pill.real_estate { background: #ecfdf5; color: #065f46; }
 .dbh-pill.index_fund  { background: #eff6ff; color: #1e40af; }
 .dbh-meta { font-size: 11.5px; color: var(--mist-400); }
-.dbh-prog { height: 3px; background: var(--mist-100); border-radius: 2px; overflow: hidden; margin-top: .6rem; }
-.dbh-prog-fill { height: 100%; background: var(--em-500); border-radius: 2px; }
-.dbh-right { text-align: right; }
-.dbh-amount { font-size: 14px; font-weight: 800; color: var(--mist-900); }
-.dbh-roi { font-size: 11.5px; font-weight: 700; color: var(--em-600); margin-top: .2rem; }
+.dbh-prog { height: 6px; background: var(--mist-100); border-radius: 4px; overflow: hidden; }
+.dbh-prog-fill { height: 100%; background: linear-gradient(90deg, var(--em-500), var(--em-600)); border-radius: 4px; width: 0; transition: width 1.1s cubic-bezier(.22,.7,.3,1); }
+.dbh-prog-lbls { display: flex; justify-content: space-between; margin-top: .4rem; font-size: 10.5px; font-weight: 500; color: var(--mist-400); }
+.dbh-right { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; }
+.dbh-amount { font-size: 15px; font-weight: 800; color: var(--mist-900); font-variant-numeric: tabular-nums; }
+.dbh-roi { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 700; color: var(--em-700); background: var(--em-50); padding: 2px 8px; border-radius: 20px; margin-top: .4rem; }
+@media(max-width:480px) { .dbh-ic { display: none; } }
 .db-empty { text-align: center; padding: 2.5rem 1.5rem; }
 .db-empty-icon { width: 52px; height: 52px; background: var(--mist-100); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto .85rem; }
 .db-empty-text { font-size: 13px; color: var(--mist-500); margin-bottom: 1.1rem; }
@@ -260,33 +271,24 @@ function obToggle(){
 </script>
 <?php endif; ?>
 
-<?php /* Stat strip */ ?>
+<?php /* Balance cards */ ?>
+<?php $portfolioVal = $stats['balance'] + $stats['total_invested']; ?>
 <div class="db-stats">
   <div class="db-stat">
-    <div class="db-stat-lbl">Wallet balance</div>
-    <div class="db-stat-val"><?= fmt_currency($stats['balance']) ?></div>
+    <div class="db-stat-top">
+      <span class="db-stat-lbl">Account balance</span>
+      <span class="db-stat-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/><path d="M6 15h4"/></svg></span>
+    </div>
+    <div class="db-stat-val" data-count="<?= (float)$stats['balance'] ?>"><?= fmt_currency($stats['balance']) ?></div>
     <div class="db-stat-sub">Available to invest or withdraw</div>
   </div>
-  <div class="db-stat">
-    <div class="db-stat-lbl">Total invested</div>
-    <div class="db-stat-val"><?= fmt_currency($stats['total_invested']) ?></div>
-    <div class="db-stat-sub"><?= (int)$stats['active_count'] ?> active position<?= $stats['active_count'] !== 1 ? 's' : '' ?></div>
-  </div>
-  <div class="db-stat">
-    <div class="db-stat-lbl">Returns earned</div>
-    <div class="db-stat-val em"><?= fmt_currency($stats['total_earned']) ?></div>
-    <div class="db-stat-sub up">
-      <?php if ($stats['total_invested'] > 0 && $stats['total_earned'] > 0): ?>
-        <?= number_format($stats['total_earned'] / $stats['total_invested'] * 100, 2) ?>% of invested amount
-      <?php else: ?>
-        Cumulative returns paid
-      <?php endif; ?>
+  <div class="db-stat accent">
+    <div class="db-stat-top">
+      <span class="db-stat-lbl">Portfolio value</span>
+      <span class="db-stat-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></span>
     </div>
-  </div>
-  <div class="db-stat">
-    <div class="db-stat-lbl">Portfolio value</div>
-    <div class="db-stat-val"><?= fmt_currency($stats['balance'] + $stats['total_invested']) ?></div>
-    <div class="db-stat-sub">Wallet + active investments</div>
+    <div class="db-stat-val" data-count="<?= (float)$portfolioVal ?>"><?= fmt_currency($portfolioVal) ?></div>
+    <div class="db-stat-sub">Wallet balance and active investments</div>
   </div>
 </div>
 
@@ -336,19 +338,29 @@ function obToggle(){
         $e    = strtotime($h['end_date']   ?? 'now');
         $prog = ($e > $s) ? (int) min(100, max(0, (time() - $s) / ($e - $s) * 100)) : 0;
         $roi  = (float)($h['roi'] ?? $h['inv_roi'] ?? 0);
+        $daysLeft = max(0, (int) ceil(($e - time()) / 86400));
+        $isRe = $h['type'] === 'real_estate';
       ?>
       <a class="db-holding" href="/investor/investments/<?= (int)$h['investment_id'] ?>">
-        <div>
+        <span class="dbh-ic <?= htmlspecialchars($h['type']) ?>">
+          <?php if ($isRe): ?>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/></svg>
+          <?php else: ?>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 13l3-3 3 2 5-6"/></svg>
+          <?php endif; ?>
+        </span>
+        <div class="dbh-main">
           <div class="dbh-name"><?= htmlspecialchars($h['name']) ?></div>
           <div class="dbh-row">
-            <span class="dbh-pill <?= htmlspecialchars($h['type']) ?>"><?= $h['type'] === 'real_estate' ? 'Real Estate' : 'Index Fund' ?></span>
+            <span class="dbh-pill <?= htmlspecialchars($h['type']) ?>"><?= $isRe ? 'Real Estate' : 'Index Fund' ?></span>
             <span class="dbh-meta">Matures <?= fmt_date($h['end_date']) ?></span>
           </div>
-          <div class="dbh-prog"><div class="dbh-prog-fill" style="width:<?= $prog ?>%"></div></div>
+          <div class="dbh-prog"><div class="dbh-prog-fill" data-w="<?= $prog ?>"></div></div>
+          <div class="dbh-prog-lbls"><span><?= $prog ?>% complete</span><span><?= $daysLeft ?> day<?= $daysLeft === 1 ? '' : 's' ?> left</span></div>
         </div>
         <div class="dbh-right">
           <div class="dbh-amount"><?= fmt_currency((float)$h['amount']) ?></div>
-          <div class="dbh-roi"><?= number_format($roi, 1) ?>% total</div>
+          <div class="dbh-roi">+<?= number_format($roi, 1) ?>%</div>
         </div>
       </a>
       <?php endforeach; ?>
@@ -506,11 +518,66 @@ function obToggle(){
 <script>
 var ranges = <?= json_encode($chartData) ?>;
 var sym = '<?= addslashes(platform_setting('platform_symbol','$')) ?>';
+var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 var ctx = document.getElementById('dbChart').getContext('2d');
-var grad = ctx.createLinearGradient(0, 0, 0, 188);
-grad.addColorStop(0, 'rgba(16,185,129,.12)');
-grad.addColorStop(1, 'rgba(16,185,129,0)');
+
+// Gradient built from the live chart area so it always fills correctly
+function areaGradient(chart) {
+  var a = chart.chartArea;
+  if (!a) return 'rgba(16,185,129,.12)';
+  var g = ctx.createLinearGradient(0, a.top, 0, a.bottom);
+  g.addColorStop(0,   'rgba(16,185,129,.28)');
+  g.addColorStop(0.55,'rgba(16,185,129,.09)');
+  g.addColorStop(1,   'rgba(16,185,129,0)');
+  return g;
+}
+
+// Soft glow beneath the line + vertical crosshair on hover
+var glowPlugin = {
+  id: 'glow',
+  beforeDatasetsDraw: function(chart) {
+    var c = chart.ctx; c.save();
+    c.shadowColor = 'rgba(16,185,129,.45)';
+    c.shadowBlur = 12; c.shadowOffsetY = 6;
+  },
+  afterDatasetsDraw: function(chart) { chart.ctx.restore(); }
+};
+var crosshairPlugin = {
+  id: 'crosshair',
+  afterDraw: function(chart) {
+    var act = chart.tooltip && chart.tooltip.getActiveElements ? chart.tooltip.getActiveElements() : [];
+    if (!act.length) return;
+    var x = act[0].element.x, a = chart.chartArea, c = chart.ctx;
+    c.save();
+    c.beginPath(); c.moveTo(x, a.top); c.lineTo(x, a.bottom);
+    c.lineWidth = 1; c.strokeStyle = 'rgba(16,185,129,.35)';
+    c.setLineDash([4, 4]); c.stroke(); c.restore();
+  }
+};
+
+// Progressive left-to-right line-draw animation
+function drawAnim(count) {
+  if (reduceMotion) return { duration: 0 };
+  var total = 1300, step = total / Math.max(1, count);
+  return {
+    duration: total,
+    easing: 'easeInOutCubic',
+    x: {
+      type: 'number', easing: 'linear', duration: step, from: NaN,
+      delay: function(c){ if (c.type !== 'data' || c.xStarted) return 0; c.xStarted = true; return c.index * step; }
+    },
+    y: {
+      type: 'number', easing: 'linear', duration: step,
+      from: function(c){
+        if (c.index === 0) return c.chart.scales.y.getPixelForValue(c.chart.scales.y.min);
+        var prev = c.chart.getDatasetMeta(0).data[c.index - 1];
+        return prev ? prev.getProps(['y'], true).y : undefined;
+      },
+      delay: function(c){ if (c.type !== 'data' || c.yStarted) return 0; c.yStarted = true; return c.index * step; }
+    }
+  };
+}
 
 var chart = new Chart(ctx, {
   type: 'line',
@@ -519,28 +586,35 @@ var chart = new Chart(ctx, {
     datasets: [{
       data: ranges['7d'].data,
       borderColor: '#10B981',
-      backgroundColor: grad,
-      borderWidth: 1.8,
+      backgroundColor: function(c){ return areaGradient(c.chart); },
+      borderWidth: 2.4,
       fill: true,
-      tension: 0.38,
+      tension: 0.4,
       pointRadius: 0,
-      pointHoverRadius: 4,
+      pointHoverRadius: 5,
+      pointBackgroundColor: '#10B981',
       pointHoverBackgroundColor: '#10B981',
       pointHoverBorderColor: '#fff',
-      pointHoverBorderWidth: 2,
+      pointHoverBorderWidth: 2.5,
     }]
   },
   options: {
     responsive: true,
     maintainAspectRatio: false,
+    animation: drawAnim(ranges['7d'].data.length),
+    interaction: { mode: 'index', intersect: false },
+    layout: { padding: { top: 8 } },
     plugins: {
       legend: { display: false },
       tooltip: {
         backgroundColor: '#0B1120',
-        padding: 9,
-        cornerRadius: 7,
-        titleFont: { size: 11, family: 'Inter, sans-serif' },
-        bodyFont:  { size: 12, weight: '700', family: 'Inter, sans-serif' },
+        padding: 11,
+        cornerRadius: 9,
+        displayColors: false,
+        caretSize: 5,
+        titleColor: 'rgba(255,255,255,.6)',
+        titleFont: { size: 10.5, family: 'Inter, sans-serif', weight: '600' },
+        bodyFont:  { size: 13.5, weight: '800', family: 'Inter, sans-serif' },
         callbacks: {
           label: function(c) {
             return ' ' + sym + Number(c.raw).toLocaleString('en-US', { minimumFractionDigits: 2 });
@@ -552,15 +626,16 @@ var chart = new Chart(ctx, {
       x: {
         grid: { display: false },
         border: { display: false },
-        ticks: { color: '#94A3B8', font: { size: 11 }, maxRotation: 0 }
+        ticks: { color: '#94A3B8', font: { size: 11 }, maxRotation: 0, autoSkipPadding: 14 }
       },
       y: {
         position: 'right',
-        grid: { color: '#F8FAFC' },
+        grid: { color: 'rgba(148,163,184,.12)' },
         border: { display: false },
         ticks: {
           color: '#94A3B8',
           font: { size: 11 },
+          maxTicksLimit: 5,
           callback: function(v) {
             if (v >= 1000) return sym + (v / 1000).toFixed(1) + 'k';
             return sym + v;
@@ -568,7 +643,8 @@ var chart = new Chart(ctx, {
         }
       }
     }
-  }
+  },
+  plugins: [glowPlugin, crosshairPlugin]
 });
 
 document.querySelectorAll('.db-ptab').forEach(function(tab) {
@@ -578,6 +654,7 @@ document.querySelectorAll('.db-ptab').forEach(function(tab) {
     var r = ranges[tab.dataset.range];
     chart.data.labels = r.labels;
     chart.data.datasets[0].data = r.data;
+    chart.options.animation = drawAnim(r.data.length);
     chart.update();
   });
 });
@@ -592,5 +669,34 @@ document.querySelectorAll('.db-ptab').forEach(function(tab) {
   var dateStr = days[now.getDay()] + ', ' + months[now.getMonth()] + ' ' + now.getDate() + ', ' + now.getFullYear();
   document.getElementById('db-greeting').textContent = greeting + ', <?= addslashes($firstName) ?>.';
   document.getElementById('db-date').innerHTML = dateStr + ' &nbsp;&middot;&nbsp; Investor Portal';
+})();
+</script>
+<script>
+(function(){
+  var rm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var sym = '<?= addslashes(platform_setting('platform_symbol','$')) ?>';
+
+  // Animate progress bars to their target width
+  requestAnimationFrame(function(){
+    document.querySelectorAll('.dbh-prog-fill[data-w]').forEach(function(el){
+      el.style.width = (el.getAttribute('data-w') || 0) + '%';
+    });
+  });
+
+  // Count-up the balance figures
+  document.querySelectorAll('.db-stat-val[data-count]').forEach(function(el){
+    var target = parseFloat(el.getAttribute('data-count')) || 0;
+    var final = el.textContent;
+    if (rm || target <= 0) return;
+    var start = performance.now(), dur = 950;
+    function fmt(n){ return sym + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    function tick(now){
+      var p = Math.min(1, (now - start) / dur);
+      var e = 1 - Math.pow(1 - p, 3);
+      el.textContent = fmt(target * e);
+      if (p < 1) requestAnimationFrame(tick); else el.textContent = final;
+    }
+    requestAnimationFrame(tick);
+  });
 })();
 </script>
