@@ -70,7 +70,7 @@ $nav = [
   <nav class="sidebar" id="sidebar">
     <div class="sb-logo">
       <?php if ($pLogo): ?>
-        <img src="<?= file_url($pLogo) ?>" alt="<?= htmlspecialchars($pName) ?>" style="height:46px;width:auto;max-width:180px;object-fit:contain;filter:brightness(0) invert(1)"/>
+        <img src="<?= file_url($pLogo) ?>" alt="<?= htmlspecialchars($pName) ?>" style="height:40px;width:auto;max-width:170px;object-fit:contain;filter:brightness(0) invert(1)"/>
       <?php else: ?>
         <div class="logo-mark"><?= htmlspecialchars($pInit) ?></div>
       <?php endif; ?>
