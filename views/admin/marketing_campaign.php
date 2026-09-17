@@ -4,13 +4,21 @@ $opened = (int) $openedCount;
 $notOpened = max(0, count($recipients) - $opened);
 $rate   = $sent > 0 ? round($opened / $sent * 100) : 0;
 ?>
-<div class="page-head">
+<div class="page-head" style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap">
   <div>
     <a href="/admin/marketing" style="font-size:12.5px;color:var(--text3);text-decoration:none">&larr; Back to Marketing</a>
     <h1 class="page-title" style="margin-top:.3rem"><?= htmlspecialchars($campaign['subject']) ?></h1>
     <p class="page-sub">Sent <?= date('M j, Y g:i A', strtotime($campaign['created_at'])) ?></p>
   </div>
+  <div class="mc-actions">
+    <a href="/admin/marketing?campaign=<?= (int)$campaign['id'] ?>" class="btn btn-ghost"><?= svgIcon('file',14) ?>Edit &amp; resend</a>
+    <button type="button" class="btn btn-primary" id="mc-resend" data-id="<?= (int)$campaign['id'] ?>" <?= $notOpened === 0 ? 'disabled title="Everyone has opened it"' : '' ?>>
+      <?= svgIcon('send',14,'#fff') ?>Resend to <?= $notOpened ?> non-opener<?= $notOpened === 1 ? '' : 's' ?>
+    </button>
+  </div>
 </div>
+
+<div id="mc-alert"></div>
 
 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.25rem">
   <?php foreach ([
@@ -72,6 +80,8 @@ $rate   = $sent > 0 ? round($opened / $sent * 100) : 0;
   .tbl th{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#9CA3AF;font-weight:600;padding:12px 16px;border-bottom:1px solid #F0F2F7}
   .tbl td{font-size:13px;color:#374151;padding:12px 16px;border-bottom:1px solid #F5F6F8}
   .tbl tbody tr:last-child td{border-bottom:none}
+  .mc-actions{display:flex;gap:.6rem;flex-wrap:wrap}
+  .mc-actions .btn[disabled]{opacity:.5;cursor:not-allowed}
 </style>
 
 <script>
@@ -91,5 +101,21 @@ if (copyBtn) copyBtn.addEventListener('click', function(){
     this.innerHTML = '✓ Copied ' + emails.length + ' email(s)';
     setTimeout(() => location.reload(), 1400);
   });
+});
+
+// One-click resend of the exact same email to everyone who never opened it.
+const resendBtn = document.getElementById('mc-resend');
+if (resendBtn) resendBtn.addEventListener('click', async function(){
+  const id = this.dataset.id;
+  const count = Array.from(document.querySelectorAll('.mc-row')).filter(r => r.dataset.open === 'not').length;
+  if (!confirm('Resend this campaign to ' + count + ' recipient(s) who never opened it?\n\nA large send can take a while — it will keep running until it finishes, even if you leave this page.')) return;
+  setLoading(this, true, 'Resending…');
+  const data = await post('/admin/marketing/resend', { campaign_id: id });
+  setLoading(this, false);
+  document.getElementById('mc-alert').innerHTML = data.success
+    ? '<div class="alert alert-ok">' + data.message + '</div>'
+    : '<div class="alert alert-err">' + (data.error || 'Resend failed.') + '</div>';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (data.success) setTimeout(() => location.reload(), 1800);
 });
 </script>

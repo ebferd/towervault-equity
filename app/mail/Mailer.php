@@ -1140,7 +1140,10 @@ HTML;
         $loc    = $isRE
             ? htmlspecialchars(trim(implode(', ', array_filter([$inv['city'] ?? '', $inv['country'] ?? '']))))
             : htmlspecialchars(ucwords(str_replace('_', ' ', (string) ($inv['risk_level'] ?? 'medium'))) . ' risk');
-        $link   = $appUrl . '/investor/investments/' . (int) ($inv['id'] ?? 0);
+        // Marketing recipients aren't logged in — send them to the public
+        // homepage where they can read about the company and register,
+        // instead of the login-gated opportunity page.
+        $link   = self::marketingSiteUrl();
 
         // Optional property photo band on top (images are never recoloured by dark mode).
         $imgBand = '';
@@ -1210,6 +1213,8 @@ HTML;
         $pAddr   = platform_setting('platform_address', '');
         $pEmail  = platform_setting('platform_email',   'noreply@nexvest.com');
         $legalCo = platform_setting('legal_company_name', $pName . ' — ' . platform_setting('platform_tagline','Capital Group'));
+        $site    = self::marketingSiteUrl();                                  // public homepage (apex domain)
+        $support = platform_setting('platform_support_email', $pEmail);       // contact — no login needed
 
         // Header brand: a large uploaded logo stands alone; otherwise fall back to the initials badge + name.
         $logo = trim((string) platform_setting('platform_logo', ''));
@@ -1276,9 +1281,9 @@ table{border-spacing:0;border-collapse:collapse}td{padding:0}a{text-decoration:n
   <!-- footer -->
   <tr><td class="pad m-white" bgcolor="#ffffff" style="padding:34px 40px 36px;border-top:1px solid #EDEFF3;background:#ffffff">
     <div style="text-align:center">
-      <a href="{$pUrl}" class="m-sub" style="font-size:12.5px;color:#4B5563;margin:0 12px">Website</a>
-      <a href="{$pUrl}/investor/how-it-works" class="m-sub" style="font-size:12.5px;color:#4B5563;margin:0 12px">How it works</a>
-      <a href="{$pUrl}/support" class="m-sub" style="font-size:12.5px;color:#4B5563;margin:0 12px">Contact</a>
+      <a href="{$site}" class="m-sub" style="font-size:12.5px;color:#4B5563;margin:0 12px">Website</a>
+      <a href="{$pUrl}/fund-protection" class="m-sub" style="font-size:12.5px;color:#4B5563;margin:0 12px">Fund Protection</a>
+      <a href="mailto:{$support}" class="m-sub" style="font-size:12.5px;color:#4B5563;margin:0 12px">Contact</a>
     </div>
     <div class="m-mut" style="text-align:center;font-size:11.5px;line-height:1.7;color:#8B909C;margin-top:18px">
       <b class="m-sub" style="color:#4B5563;font-weight:600">{$legalCo}</b><br/>

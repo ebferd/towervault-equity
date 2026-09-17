@@ -1,3 +1,4 @@
+<?php $pf = $prefill ?? null; $pfFeat = $pf ? array_flip($pf['featured_ids']) : []; ?>
 <div class="page-head">
   <div>
     <h1 class="page-title">Marketing</h1>
@@ -7,6 +8,27 @@
 
 <div id="mk-alert"></div>
 
+<?php if ($pf): ?>
+<div class="mk-reopen">
+  <div>
+    <b>Editing campaign #<?= (int)$pf['id'] ?>.</b>
+    <?php if ($pf['audience'] === 'nonopeners'): ?>
+      Loaded the <b><?= (int)$pf['rec_count'] ?></b> recipient(s) who never opened it. Edit anything below and resend.
+    <?php else: ?>
+      Loaded all <b><?= (int)$pf['rec_count'] ?></b> original recipient(s). Edit anything below and resend.
+    <?php endif; ?>
+  </div>
+  <div class="mk-reopen-actions">
+    <?php if ($pf['audience'] === 'nonopeners'): ?>
+      <a href="/admin/marketing?campaign=<?= (int)$pf['id'] ?>&audience=all">Load all original recipients</a>
+    <?php else: ?>
+      <a href="/admin/marketing?campaign=<?= (int)$pf['id'] ?>">Only non-openers</a>
+    <?php endif; ?>
+    <a href="/admin/marketing">Start blank</a>
+  </div>
+</div>
+<?php endif; ?>
+
 <div class="mk-grid">
   <!-- ─── Compose ─── -->
   <div>
@@ -15,15 +37,15 @@
       <div class="section-body">
         <div class="fg">
           <label class="fl">Subject line <span style="color:#C0392B">*</span></label>
-          <input class="fi" id="mk-subject" maxlength="255" placeholder="e.g. A new investment opportunity is now open"/>
+          <input class="fi" id="mk-subject" maxlength="255" placeholder="e.g. A new investment opportunity is now open" value="<?= $pf ? htmlspecialchars($pf['subject'], ENT_QUOTES) : '' ?>"/>
         </div>
         <div class="fg">
           <label class="fl">Headline <span class="fl-opt">(optional — large text above your message)</span></label>
-          <input class="fi" id="mk-headline" maxlength="255" placeholder="e.g. Invest in assets you can actually see"/>
+          <input class="fi" id="mk-headline" maxlength="255" placeholder="e.g. Invest in assets you can actually see" value="<?= $pf ? htmlspecialchars($pf['headline'], ENT_QUOTES) : '' ?>"/>
         </div>
         <div class="fg">
           <label class="fl">Message body <span style="color:#C0392B">*</span> <span class="fl-opt">(plain text — line breaks are preserved)</span></label>
-          <textarea class="fi" id="mk-body" rows="9" style="resize:vertical" placeholder="Write your message here. Introduce your company, the opportunity, and why it's worth a look."></textarea>
+          <textarea class="fi" id="mk-body" rows="9" style="resize:vertical" placeholder="Write your message here. Introduce your company, the opportunity, and why it's worth a look."><?= $pf ? htmlspecialchars($pf['body']) : '' ?></textarea>
         </div>
       </div>
     </div>
@@ -67,7 +89,7 @@
           <div class="mk-opps">
             <?php foreach ($investments as $inv): ?>
               <label class="mk-opp">
-                <input type="checkbox" class="mk-opp-cb" value="<?= (int)$inv['id'] ?>"/>
+                <input type="checkbox" class="mk-opp-cb" value="<?= (int)$inv['id'] ?>"<?= isset($pfFeat[(int)$inv['id']]) ? ' checked' : '' ?>/>
                 <span class="mk-opp-body">
                   <span class="mk-opp-name"><?= htmlspecialchars($inv['name']) ?></span>
                   <span class="mk-opp-meta">
@@ -82,7 +104,7 @@
         <?php endif; ?>
         <div class="fg" style="margin-top:1rem;max-width:340px">
           <label class="fl">Button label <span class="fl-opt">(optional)</span></label>
-          <input class="fi" id="mk-cta-label" maxlength="120" placeholder="Visit website"/>
+          <input class="fi" id="mk-cta-label" maxlength="120" placeholder="Visit website" value="<?= $pf ? htmlspecialchars($pf['cta_label'], ENT_QUOTES) : '' ?>"/>
           <p class="fl-opt" style="margin-top:.4rem">The button always links to your website — you never need to paste a link.</p>
         </div>
       </div>
@@ -93,7 +115,7 @@
       <div class="section-body">
         <div class="fg">
           <label class="fl">Email addresses <span style="color:#C0392B">*</span> <span class="fl-opt">(paste as many as you like — separated by comma, space, or new line)</span></label>
-          <textarea class="fi" id="mk-recipients" rows="7" style="resize:vertical;font-family:monospace;font-size:12.5px" placeholder="jane@example.com&#10;john@example.com, mark@example.com"></textarea>
+          <textarea class="fi" id="mk-recipients" rows="7" style="resize:vertical;font-family:monospace;font-size:12.5px" placeholder="jane@example.com&#10;john@example.com, mark@example.com"><?= $pf ? htmlspecialchars($pf['recipients']) : '' ?></textarea>
           <p class="fl-opt" style="margin-top:.4rem"><span id="mk-count">0</span> valid address(es) detected. Anyone who has unsubscribed is skipped automatically. Max 500 per send.</p>
         </div>
       </div>
@@ -176,6 +198,11 @@
   .mk-chip-x{background:none;border:none;color:#8A93A6;font-size:16px;line-height:1;cursor:pointer;padding:0 4px}
   .mk-chip-x:hover{color:#C0392B}
   @media(max-width:900px){.mk-grid{grid-template-columns:1fr}.mk-sticky{position:static}.mk-opps{grid-template-columns:1fr}}
+  .mk-reopen{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;background:#F5F8FC;border:1px solid #DCE3EE;border-radius:10px;padding:.8rem 1rem;margin-bottom:1.1rem;font-size:13px;color:#1E3A5F}
+  .mk-reopen b{font-weight:700}
+  .mk-reopen-actions{display:flex;gap:.9rem;flex-shrink:0}
+  .mk-reopen-actions a{font-size:12.5px;font-weight:600;color:#1E3A5F;text-decoration:none;white-space:nowrap}
+  .mk-reopen-actions a:hover{text-decoration:underline}
 </style>
 
 <script>
@@ -191,6 +218,7 @@ function countRecipients(){
   return set.size;
 }
 $('mk-recipients').addEventListener('input', countRecipients);
+countRecipients(); // reflect any pre-filled recipients on load
 
 function payload(){
   const ids = Array.from(document.querySelectorAll('.mk-opp-cb:checked')).map(c=>c.value);

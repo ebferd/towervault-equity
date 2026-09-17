@@ -1438,7 +1438,32 @@ class AdminController {
         $adminEmail  = platform_setting('admin_notification_email', platform_setting('smtp_user', ''));
         $senders     = self::marketingSenders();
         $senderDomain= self::marketingDomain();
-        view('admin.marketing', compact('investments','recent','unsubCount','adminEmail','senders','senderDomain'), 'admin');
+
+        // Re-open a past campaign for editing / resending: prefill the composer
+        // with its content and load the people who never opened it as recipients.
+        $prefill = null;
+        $reopenId = (int) ($_GET['campaign'] ?? 0);
+        if ($reopenId > 0) {
+            $c = DB::fetch("SELECT * FROM marketing_campaigns WHERE id=?", [$reopenId]);
+            if ($c) {
+                $onlyNonOpeners = ($_GET['audience'] ?? 'nonopeners') !== 'all';
+                $recSql = "SELECT email FROM marketing_recipients WHERE campaign_id=?"
+                        . ($onlyNonOpeners ? " AND opened_at IS NULL" : "") . " ORDER BY email";
+                $recEmails = array_column(DB::fetchAll($recSql, [$reopenId]), 'email');
+                $prefill = [
+                    'id'          => (int) $c['id'],
+                    'subject'     => (string) $c['subject'],
+                    'headline'    => (string) ($c['headline'] ?? ''),
+                    'body'        => (string) $c['body'],
+                    'cta_label'   => (string) ($c['cta_label'] ?? ''),
+                    'featured_ids'=> self::marketingIds($c['featured_ids'] ?? ''),
+                    'recipients'  => implode("\n", $recEmails),
+                    'audience'    => $onlyNonOpeners ? 'nonopeners' : 'all',
+                    'rec_count'   => count($recEmails),
+                ];
+            }
+        }
+        view('admin.marketing', compact('investments','recent','unsubCount','adminEmail','senders','senderDomain','prefill'), 'admin');
     }
 
     /** Add a custom sender identity (name + on-domain email). */
@@ -1536,9 +1561,25 @@ class AdminController {
         if (empty($emails))      json_response(['success' => false, 'error' => 'No valid recipient email addresses found.']);
         if (count($emails) > 500) json_response(['success' => false, 'error' => 'Please send to at most 500 recipients per campaign.']);
 
-        // Drop anyone on the suppression list
-        $suppressed = array_column(DB::fetchAll("SELECT email FROM marketing_unsubscribes"), 'email');
-        $suppressed = array_flip(array_map('strtolower', $suppressed));
+        $r = self::dispatchMarketing($subject, $headline, $body, $featIds, $invs, $ctaLabel, $from, $emails, $batch, $adminId);
+        if (!$r['success']) json_response($r);
+
+        $msg = "Sent to {$r['sent']} recipient(s).";
+        if ($r['failed'])              $msg .= " {$r['failed']} failed.";
+        if ($r['skipped'])             $msg .= " {$r['skipped']} skipped (unsubscribed).";
+        if (count($r['remaining']))    $msg .= " " . count($r['remaining']) . " loaded below for the next batch.";
+        json_response(['success' => true, 'message' => $msg, 'sent' => $r['sent'], 'failed' => $r['failed'], 'skipped' => $r['skipped'], 'remaining' => $r['remaining']]);
+    }
+
+    /**
+     * Shared send core: suppression filter, optional batch throttle, create the
+     * campaign + per-recipient tracking rows, then send with pacing.
+     * The request is given unlimited time and keeps running even if the browser
+     * disconnects, so a large send always has enough time to finish.
+     */
+    private static function dispatchMarketing(string $subject, ?string $headline, string $body, array $featIds, array $invs, string $ctaLabel, ?array $from, array $emails, int $batch, int $adminId): array {
+        // Drop anyone on the suppression (unsubscribe) list.
+        $suppressed = array_flip(array_map('strtolower', array_column(DB::fetchAll("SELECT email FROM marketing_unsubscribes"), 'email')));
         $eligible = array_values(array_filter($emails, fn($e) => !isset($suppressed[$e])));
         $skipped  = count($emails) - count($eligible);
 
@@ -1549,14 +1590,18 @@ class AdminController {
             $eligible  = array_slice($eligible, 0, $batch);
         }
 
-        // Sending many messages over SMTP is slow — don't let the request time out,
-        // and keep going even if the browser disconnects. Pace sends to protect
-        // deliverability / stay under provider rate limits.
+        $total = count($eligible);
+        if ($total === 0) {
+            return ['success' => false, 'error' => 'No eligible recipients to send to (they may all be unsubscribed).'];
+        }
+
+        // Sending many messages over SMTP is slow — remove the time limit, keep
+        // running past a browser disconnect, and pace sends for deliverability.
         @set_time_limit(0);
         @ignore_user_abort(true);
+        @ini_set('max_execution_time', '0');
 
         // Create the campaign row first so each recipient can be linked for open-tracking.
-        $total = count($eligible);
         $campaignId = (int) DB::insert(
             "INSERT INTO marketing_campaigns (subject, headline, body, featured_ids, cta_label, recipient_count, sent_count, failed_count, sent_by)
              VALUES (?,?,?,?,?,?,0,0,?)",
@@ -1565,20 +1610,49 @@ class AdminController {
 
         $sent = 0; $failed = 0;
         foreach ($eligible as $i => $e) {
-            // Unique per-recipient token embedded in the tracking pixel.
-            $token = bin2hex(random_bytes(16));
+            $token = bin2hex(random_bytes(16)); // unique per-recipient open-tracking token
             DB::query("INSERT INTO marketing_recipients (campaign_id, email, token) VALUES (?,?,?)", [$campaignId, $e, $token]);
-            if (Mailer::sendMarketing($e, $subject, $body, $headline, $invs, $ctaLabel, $token, $from)) $sent++; else $failed++;
+            if (Mailer::sendMarketing($e, $subject, $body, $headline ?? '', $invs, $ctaLabel, $token, $from)) $sent++; else $failed++;
             if ($i < $total - 1) usleep(400000); // ~0.4s between sends
         }
         DB::execute("UPDATE marketing_campaigns SET sent_count=?, failed_count=? WHERE id=?", [$sent, $failed, $campaignId]);
         audit_log($adminId, 'marketing_sent', "Marketing campaign '{$subject}' sent to {$sent} recipient(s)" . ($skipped ? ", {$skipped} suppressed" : '') . (count($remaining) ? ', ' . count($remaining) . ' held for next batch' : ''), 'medium', 'platform', null, 'Marketing');
 
-        $msg = "Sent to {$sent} recipient(s).";
-        if ($failed)          $msg .= " {$failed} failed.";
-        if ($skipped)         $msg .= " {$skipped} skipped (unsubscribed).";
-        if (count($remaining)) $msg .= " " . count($remaining) . " loaded below for the next batch.";
-        json_response(['success' => true, 'message' => $msg, 'sent' => $sent, 'failed' => $failed, 'skipped' => $skipped, 'remaining' => array_values($remaining)]);
+        return ['success' => true, 'sent' => $sent, 'failed' => $failed, 'skipped' => $skipped, 'remaining' => array_values($remaining), 'campaign_id' => $campaignId];
+    }
+
+    /** One-click resend of a past campaign to the recipients who never opened it. */
+    public static function marketingResend(): void {
+        AuthMiddleware::admin();
+        AuthMiddleware::verifyCsrf();
+        $adminId = current_admin_id();
+        $id      = (int) input('campaign_id', 0);
+        $campaign = DB::fetch("SELECT * FROM marketing_campaigns WHERE id=?", [$id]);
+        if (!$campaign) json_response(['success' => false, 'error' => 'Campaign not found.']);
+
+        // Everyone from the original campaign who has no recorded open.
+        $nonOpeners = array_column(
+            DB::fetchAll("SELECT email FROM marketing_recipients WHERE campaign_id=? AND opened_at IS NULL ORDER BY email", [$id]),
+            'email'
+        );
+        if (empty($nonOpeners)) json_response(['success' => false, 'error' => 'Everyone on this campaign has already opened it — no one to resend to.']);
+
+        $featIds = self::marketingIds($campaign['featured_ids'] ?? '');
+        $invs    = self::marketingInvestments($featIds);
+        $from    = self::resolveSender((string) input('sender_email', ''));
+        $batch   = max(0, (int) input('batch_size', 0)); // 0 = send to all non-openers now
+
+        $r = self::dispatchMarketing(
+            (string) $campaign['subject'], $campaign['headline'] ?? '', (string) $campaign['body'],
+            $featIds, $invs, (string) ($campaign['cta_label'] ?? ''), $from, $nonOpeners, $batch, $adminId
+        );
+        if (!$r['success']) json_response($r);
+
+        $msg = "Resent to {$r['sent']} of " . count($nonOpeners) . " non-opener(s).";
+        if ($r['failed'])           $msg .= " {$r['failed']} failed.";
+        if ($r['skipped'])          $msg .= " {$r['skipped']} skipped (unsubscribed).";
+        if (count($r['remaining'])) $msg .= " " . count($r['remaining']) . " left for the next batch.";
+        json_response(['success' => true, 'message' => $msg, 'sent' => $r['sent'], 'failed' => $r['failed'], 'remaining' => $r['remaining']]);
     }
 
     // ═══ Market news management ════════════════════════════════
