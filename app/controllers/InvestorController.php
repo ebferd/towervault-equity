@@ -1339,6 +1339,52 @@ class InvestorController {
         exit;
     }
 
+    // ── Public news feed (for the marketing site) ─────────────
+    // Read-only JSON of published, non-expired market-news posts so the
+    // WordPress site can render a live news slider + read-in-place modal.
+    public static function apiNews(): void {
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, OPTIONS');
+        header('Cache-Control: public, max-age=300');
+        if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') { http_response_code(204); exit; }
+
+        $limit = max(1, min(24, (int) ($_GET['limit'] ?? 12)));
+        $rows  = DB::fetchAll(
+            "SELECT * FROM news_posts
+              WHERE status='published' AND (expires_at IS NULL OR expires_at > NOW())
+              ORDER BY published_at DESC LIMIT {$limit}"
+        );
+
+        $resolveImg = function ($img) {
+            $img = trim((string) $img);
+            if ($img === '') return null;
+            return preg_match('#^https?://#i', $img) ? $img : file_url_abs($img);
+        };
+
+        $out = [];
+        foreach ($rows as $r) {
+            $body    = trim((string) ($r['summary'] ?? ''));
+            $plain   = trim(preg_replace('/\s+/', ' ', $body));
+            $excerpt = mb_strimwidth($plain, 0, 150, '…');
+            $out[] = [
+                'id'         => (int) $r['id'],
+                'title'      => (string) $r['title'],
+                'category'   => (string) ($r['category'] ?: 'Global'),
+                'source'     => $r['source_name'] ?: null,
+                'source_url' => $r['source_url'] ?: null,
+                'image'      => $resolveImg($r['image']),
+                'date'       => date('j M Y', strtotime($r['published_at'])),
+                'time_ago'   => time_ago($r['published_at']),
+                'excerpt'    => $excerpt,
+                'body'       => $body,
+            ];
+        }
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => true, 'count' => count($out), 'news' => $out], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     public static function terms(): void {
         $content = platform_setting('legal_terms', '');
         $name    = platform_setting('platform_name', 'NexVest');

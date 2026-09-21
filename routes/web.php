@@ -88,6 +88,7 @@ Router::get('/terms',                    [InvestorController::class, 'terms']);
 Router::get('/privacy',                  [InvestorController::class, 'privacy']);
 Router::get('/fund-protection',          [InvestorController::class, 'fundProtection']);
 Router::get('/api/opportunities',        [InvestorController::class, 'apiOpportunities']);
+Router::get('/api/news',                 [InvestorController::class, 'apiNews']);
 Router::get('/investor/fund-protection', [InvestorController::class, 'fundProtection']);
 Router::get('/unsubscribe',              [InvestorController::class, 'unsubscribe']);
 Router::get('/e/open',                   [InvestorController::class, 'emailOpen']);
