@@ -1281,6 +1281,64 @@ class InvestorController {
         }
     }
 
+    // ── Public opportunities feed (for the marketing site) ─────
+    // Read-only JSON of featured, active opportunities. CORS-open and
+    // cached so the WordPress site can render live cards that update
+    // automatically whenever opportunities change in the dashboard.
+    public static function apiOpportunities(): void {
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, OPTIONS');
+        header('Cache-Control: public, max-age=300'); // 5-minute edge/browser cache
+        if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') { http_response_code(204); exit; }
+
+        $limit = max(1, min(24, (int) ($_GET['limit'] ?? 12)));
+        $all   = ($_GET['all'] ?? '') === '1';                     // include non-featured too
+        $where = "status='active'" . ($all ? '' : ' AND is_featured=1');
+        $rows  = DB::fetchAll("SELECT * FROM investments WHERE {$where} ORDER BY is_featured DESC, created_at DESC LIMIT {$limit}");
+
+        $sym     = platform_setting('platform_symbol', '$');
+        $appBase = rtrim((string) platform_setting('platform_website', ''), '/');
+        $register = $appBase . '/register';                        // "Open an account"
+
+        $money   = fn($v) => $sym . number_format((float) $v, 0);
+        $freqMap = ['daily'=>'Daily','weekly'=>'Weekly','monthly'=>'Monthly','quarterly'=>'Quarterly','semi_annual'=>'Semi-annual','at_maturity'=>'At maturity'];
+        $riskMap = ['low'=>'Low','low_medium'=>'Low–Medium','medium'=>'Medium','medium_high'=>'Medium–High','high'=>'High'];
+
+        $out = [];
+        foreach ($rows as $r) {
+            $isRE   = $r['type'] === 'real_estate';
+            $target = (float) $r['funding_target'];
+            $pct    = $target > 0 ? min(100, (int) round((float) $r['funding_raised'] / $target * 100)) : null;
+            $loc    = $isRE ? trim(implode(', ', array_filter([$r['city'] ?? '', $r['country'] ?? '']))) : '';
+            $out[]  = [
+                'id'          => (int) $r['id'],
+                'name'        => (string) $r['name'],
+                'type'        => (string) $r['type'],
+                'type_label'  => $isRE ? 'Real Estate' : 'Index Fund',
+                'roi_label'   => rtrim(rtrim(number_format((float) $r['roi'], 2), '0'), '.') . '%',
+                'duration'    => (int) $r['duration_value'] . ' ' . $r['duration_unit'],
+                'payout'      => $freqMap[$r['payout_frequency']] ?? ucfirst((string) $r['payout_frequency']),
+                'min_label'   => $money($r['min_investment']),
+                'risk'        => $isRE ? null : ($riskMap[$r['risk_level']] ?? null),
+                'location'    => $loc ?: null,
+                'funding_pct' => $pct,
+                'image'       => !empty($r['image']) ? file_url_abs((string) $r['image']) : null,
+                'short_desc'  => $r['short_desc'] ?: null,
+                'url'         => $register,
+            ];
+        }
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'success'       => true,
+            'currency'      => $sym,
+            'register_url'  => $register,
+            'count'         => count($out),
+            'opportunities' => $out,
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     public static function terms(): void {
         $content = platform_setting('legal_terms', '');
         $name    = platform_setting('platform_name', 'NexVest');
