@@ -1,12 +1,20 @@
 <?php $pf = $prefill ?? null; $pfFeat = $pf ? array_flip($pf['featured_ids']) : []; ?>
-<div class="page-head">
+<div class="page-head" style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap">
   <div>
     <h1 class="page-title">Marketing</h1>
     <p class="page-sub">Send a designed outreach email to potential clients. You write the subject and message — we handle the layout.</p>
   </div>
+  <a href="/admin/marketing/list" class="btn btn-ghost"><?= svgIcon('users',14) ?>Email list</a>
 </div>
 
 <div id="mk-alert"></div>
+
+<?php if (!empty($listPrefill)): ?>
+<div class="mk-reopen">
+  <div>Loaded <b><?= count($listPrefill) ?></b> address(es) from your email list into Recipients below. Unsubscribed people are never included.</div>
+  <div class="mk-reopen-actions"><a href="/admin/marketing/list">Back to email list</a><a href="/admin/marketing">Start blank</a></div>
+</div>
+<?php endif; ?>
 
 <?php if ($pf): ?>
 <div class="mk-reopen">
@@ -115,7 +123,7 @@
       <div class="section-body">
         <div class="fg">
           <label class="fl">Email addresses <span style="color:#C0392B">*</span> <span class="fl-opt">(paste as many as you like — separated by comma, space, or new line)</span></label>
-          <textarea class="fi" id="mk-recipients" rows="7" style="resize:vertical;font-family:monospace;font-size:12.5px" placeholder="jane@example.com&#10;john@example.com, mark@example.com"><?= $pf ? htmlspecialchars($pf['recipients']) : '' ?></textarea>
+          <textarea class="fi" id="mk-recipients" rows="7" style="resize:vertical;font-family:monospace;font-size:12.5px" placeholder="jane@example.com&#10;john@example.com, mark@example.com"><?= $pf ? htmlspecialchars($pf['recipients']) : (!empty($listPrefill) ? htmlspecialchars(implode("\n", $listPrefill)) : '') ?></textarea>
           <p class="fl-opt" style="margin-top:.4rem"><span id="mk-count">0</span> valid address(es) detected. Anyone who has unsubscribed is skipped automatically. Max 500 per send.</p>
         </div>
         <button type="button" class="btn btn-ghost" id="mk-verify-btn"><?= svgIcon('check',14) ?>Check addresses</button>

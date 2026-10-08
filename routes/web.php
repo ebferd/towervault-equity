@@ -186,6 +186,8 @@ Router::post('/admin/settings',          [AdminController::class, 'saveSettings'
 Router::post('/admin/announce',          [AdminController::class, 'sendAnnouncement']);
 Router::get('/admin/marketing',          [AdminController::class, 'marketing']);
 Router::get('/admin/marketing/campaign/{id}', [AdminController::class, 'marketingCampaign']);
+Router::get('/admin/marketing/list',     [AdminController::class, 'marketingList']);
+Router::get('/admin/marketing/list/export', [AdminController::class, 'marketingListExport']);
 Router::post('/admin/marketing/test',    [AdminController::class, 'marketingTest']);
 Router::post('/admin/marketing/send',    [AdminController::class, 'marketingSend']);
 Router::post('/admin/marketing/resend',  [AdminController::class, 'marketingResend']);

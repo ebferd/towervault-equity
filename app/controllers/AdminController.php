@@ -1539,7 +1539,99 @@ class AdminController {
                 ];
             }
         }
-        view('admin.marketing', compact('investments','recent','unsubCount','adminEmail','senders','senderDomain','prefill'), 'admin');
+        // "Use in a campaign" from the Email list: load the matching addresses
+        // (never anyone who unsubscribed) into the recipients box.
+        $listPrefill = null;
+        if (!$prefill && isset($_GET['from_list'])) {
+            [$search, $filter] = self::emailListFilter();
+            if ($filter === 'all' || $filter === 'unsubscribed') $filter = 'subscribed';
+            [$sql, $params] = self::emailListQuery($search, $filter);
+            $listPrefill = array_column(DB::fetchAll("{$sql} ORDER BY email ASC", $params), 'email');
+        }
+        view('admin.marketing', compact('investments','recent','unsubCount','adminEmail','senders','senderDomain','prefill','listPrefill'), 'admin');
+    }
+
+    /**
+     * Every address already stored from past campaigns, one row per email:
+     * how often it was emailed, whether it opened, and whether it unsubscribed.
+     * Returns [sql, params] for the filtered list (used by the page and the CSV export).
+     */
+    private static function emailListQuery(string $search, string $filter): array {
+        $where = ''; $params = [];
+        if ($search !== '') { $where = "WHERE r.email LIKE ?"; $params[] = '%' . $search . '%'; }
+        $having = match ($filter) {
+            'opened'       => "HAVING unsubscribed = 0 AND opens > 0",
+            'not_opened'   => "HAVING unsubscribed = 0 AND opens = 0",
+            'subscribed'   => "HAVING unsubscribed = 0",
+            'unsubscribed' => "HAVING unsubscribed = 1",
+            default        => '',
+        };
+        $sql = "SELECT LOWER(r.email) AS email,
+                       COUNT(DISTINCT r.campaign_id)       AS campaigns,
+                       MIN(r.sent_at)                      AS first_sent,
+                       MAX(r.sent_at)                      AS last_sent,
+                       SUM(r.opened_at IS NOT NULL)        AS opens,
+                       MAX(r.last_opened_at)               AS last_opened,
+                       MAX(u.id IS NOT NULL)               AS unsubscribed
+                  FROM marketing_recipients r
+             LEFT JOIN marketing_unsubscribes u ON u.email = r.email
+                {$where}
+              GROUP BY LOWER(r.email)
+                {$having}";
+        return [$sql, $params];
+    }
+
+    private static function emailListFilter(): array {
+        $search = trim((string) ($_GET['q'] ?? ''));
+        $filter = (string) ($_GET['filter'] ?? 'all');
+        if (!in_array($filter, ['all','subscribed','opened','not_opened','unsubscribed'], true)) $filter = 'all';
+        return [$search, $filter];
+    }
+
+    /** Admin → Marketing → Email list: browse every stored address. */
+    public static function marketingList(): void {
+        AuthMiddleware::admin();
+        [$search, $filter] = self::emailListFilter();
+        [$sql, $params]    = self::emailListQuery($search, $filter);
+        $page = max(1, (int) ($_GET['page'] ?? 1));
+        $list = paginate("SELECT COUNT(*) AS total FROM ({$sql}) x", "{$sql} ORDER BY last_sent DESC, email ASC", $params, $page, 50);
+
+        // Overall totals (ignoring the search/filter) for the summary tiles.
+        [$allSql] = self::emailListQuery('', 'all');
+        $totals = DB::fetch(
+            "SELECT COUNT(*) AS total, SUM(unsubscribed = 0) AS subscribed, SUM(unsubscribed = 0 AND opens > 0) AS opened, SUM(unsubscribed = 1) AS unsubscribed
+               FROM ({$allSql}) x"
+        ) ?? [];
+
+        view('admin.marketing_list', [
+            'title'  => 'Email List',
+            'rows'   => $list['data'], 'page' => $list['page'], 'pages' => $list['pages'], 'total' => $list['total'],
+            'search' => $search, 'filter' => $filter, 'totals' => $totals,
+        ], 'admin');
+    }
+
+    /** Download the filtered email list as a CSV file. */
+    public static function marketingListExport(): void {
+        AuthMiddleware::admin();
+        [$search, $filter] = self::emailListFilter();
+        [$sql, $params]    = self::emailListQuery($search, $filter);
+        $rows = DB::fetchAll("{$sql} ORDER BY email ASC", $params);
+
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="email-list-' . date('Y-m-d') . '.csv"');
+        $out = fopen('php://output', 'w');
+        fputcsv($out, ['Email', 'Status', 'Campaigns received', 'Opened', 'First emailed', 'Last emailed', 'Last opened']);
+        foreach ($rows as $r) {
+            fputcsv($out, [
+                $r['email'],
+                (int) $r['unsubscribed'] ? 'Unsubscribed' : 'Subscribed',
+                (int) $r['campaigns'],
+                (int) $r['opens'] > 0 ? 'Yes' : 'No',
+                $r['first_sent'], $r['last_sent'], $r['last_opened'] ?? '',
+            ]);
+        }
+        fclose($out);
+        exit;
     }
 
     /** Add a custom sender identity (name + on-domain email). */
