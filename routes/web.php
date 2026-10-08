@@ -189,6 +189,7 @@ Router::get('/admin/marketing/campaign/{id}', [AdminController::class, 'marketin
 Router::post('/admin/marketing/test',    [AdminController::class, 'marketingTest']);
 Router::post('/admin/marketing/send',    [AdminController::class, 'marketingSend']);
 Router::post('/admin/marketing/resend',  [AdminController::class, 'marketingResend']);
+Router::post('/admin/marketing/verify',  [AdminController::class, 'marketingVerify']);
 Router::post('/admin/marketing/senders/add',    [AdminController::class, 'addMarketingSender']);
 Router::post('/admin/marketing/senders/delete', [AdminController::class, 'deleteMarketingSender']);
 Router::post('/admin/settings/test-smtp',[AdminController::class, 'testSmtp']);

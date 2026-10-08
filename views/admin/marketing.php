@@ -118,6 +118,19 @@
           <textarea class="fi" id="mk-recipients" rows="7" style="resize:vertical;font-family:monospace;font-size:12.5px" placeholder="jane@example.com&#10;john@example.com, mark@example.com"><?= $pf ? htmlspecialchars($pf['recipients']) : '' ?></textarea>
           <p class="fl-opt" style="margin-top:.4rem"><span id="mk-count">0</span> valid address(es) detected. Anyone who has unsubscribed is skipped automatically. Max 500 per send.</p>
         </div>
+        <button type="button" class="btn btn-ghost" id="mk-verify-btn"><?= svgIcon('check',14) ?>Check addresses</button>
+        <div id="mk-verify" class="mk-verify" style="display:none">
+          <div class="mk-v-sum">
+            <span class="mk-v-pill ok"><b id="mk-v-valid">0</b> valid</span>
+            <span class="mk-v-pill warn"><b id="mk-v-risky">0</b> risky</span>
+            <span class="mk-v-pill bad"><b id="mk-v-invalid">0</b> invalid</span>
+          </div>
+          <div id="mk-v-list" class="mk-v-list"></div>
+          <div class="mk-v-actions">
+            <button type="button" class="btn btn-ghost" id="mk-v-fix" style="display:none">Apply suggested fixes</button>
+            <button type="button" class="btn btn-ghost" id="mk-v-keep">Keep only valid addresses</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -199,6 +212,19 @@
   .mk-chip-x:hover{color:#C0392B}
   @media(max-width:900px){.mk-grid{grid-template-columns:1fr}.mk-sticky{position:static}.mk-opps{grid-template-columns:1fr}}
   .mk-reopen{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;background:#F5F8FC;border:1px solid #DCE3EE;border-radius:10px;padding:.8rem 1rem;margin-bottom:1.1rem;font-size:13px;color:#1E3A5F}
+  .mk-verify{margin-top:1rem;border:1px solid #E5E7EB;border-radius:10px;padding:.9rem 1rem}
+  .mk-v-sum{display:flex;gap:.5rem;flex-wrap:wrap}
+  .mk-v-pill{font-size:12px;border-radius:99px;padding:3px 10px;border:1px solid}
+  .mk-v-pill.ok{color:#0f7a4a;background:#EEF8F2;border-color:#CBE9D7}
+  .mk-v-pill.warn{color:#9A6400;background:#FFF7E8;border-color:#F3DDB0}
+  .mk-v-pill.bad{color:#C0392B;background:#FDF0EE;border-color:#F3CFCA}
+  .mk-v-list{max-height:240px;overflow:auto;margin-top:.75rem}
+  .mk-v-row{display:flex;justify-content:space-between;gap:1rem;font-size:12.5px;padding:6px 0;border-bottom:1px solid #F5F6F8}
+  .mk-v-row:last-child{border-bottom:none}
+  .mk-v-row code{font-size:12.5px;color:#111827;word-break:break-all}
+  .mk-v-why{color:#6B7280;text-align:right;flex-shrink:0;max-width:55%}
+  .mk-v-why em{font-style:normal;color:#1E3A5F;font-weight:600}
+  .mk-v-actions{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.75rem}
   .mk-reopen b{font-weight:700}
   .mk-reopen-actions{display:flex;gap:.9rem;flex-shrink:0}
   .mk-reopen-actions a{font-size:12.5px;font-weight:600;color:#1E3A5F;text-decoration:none;white-space:nowrap}
@@ -217,8 +243,51 @@ function countRecipients(){
   $('mk-count').textContent = set.size;
   return set.size;
 }
-$('mk-recipients').addEventListener('input', countRecipients);
+$('mk-recipients').addEventListener('input', function(){ countRecipients(); $('mk-verify').style.display = 'none'; });
 countRecipients(); // reflect any pre-filled recipients on load
+
+// ── Address checker ───────────────────────────────────────────
+let mkVerify = null; // last check results
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+$('mk-verify-btn').addEventListener('click', async function(){
+  if(!$('mk-recipients').value.trim()){ $('mk-alert').innerHTML = '<div class="alert alert-err">Paste some addresses to check first.</div>'; window.scrollTo({top:0,behavior:'smooth'}); return; }
+  setLoading(this, true, 'Checking…');
+  const data = await post('/admin/marketing/verify', { recipients: $('mk-recipients').value });
+  setLoading(this, false);
+  if(!data.success){ $('mk-alert').innerHTML = '<div class="alert alert-err">' + (data.error || 'Check failed.') + '</div>'; window.scrollTo({top:0,behavior:'smooth'}); return; }
+  mkVerify = data.results;
+  $('mk-v-valid').textContent = data.counts.valid;
+  $('mk-v-risky').textContent = data.counts.risky;
+  $('mk-v-invalid').textContent = data.counts.invalid;
+  const flagged = mkVerify.filter(r => r.status !== 'valid');
+  $('mk-v-list').innerHTML = flagged.length
+    ? flagged.map(r => '<div class="mk-v-row"><code>' + esc(r.email) + '</code><span class="mk-v-why">' + esc(r.reason)
+        + (r.suggestion ? ' — did you mean <em>' + esc(r.suggestion) + '</em>?' : '') + '</span></div>').join('')
+    : '<p class="fl-opt" style="margin:0">All addresses look good.</p>';
+  $('mk-v-fix').style.display = mkVerify.some(r => r.suggestion) ? '' : 'none';
+  $('mk-verify').style.display = '';
+});
+
+// Replace typo'd addresses with their suggested correction (others untouched).
+$('mk-v-fix').addEventListener('click', function(){
+  if(!mkVerify) return;
+  const out = new Set(mkVerify.map(r => r.suggestion || r.email));
+  $('mk-recipients').value = Array.from(out).join('\n');
+  countRecipients();
+  $('mk-verify-btn').click(); // re-check the corrected list
+});
+
+// Drop invalid and risky addresses, keeping only the ones that passed every check.
+$('mk-v-keep').addEventListener('click', function(){
+  if(!mkVerify) return;
+  const keep = mkVerify.filter(r => r.status === 'valid').map(r => r.email);
+  $('mk-recipients').value = keep.join('\n');
+  countRecipients();
+  $('mk-verify').style.display = 'none';
+  $('mk-alert').innerHTML = '<div class="alert alert-ok">Kept ' + keep.length + ' valid address(es).</div>';
+  window.scrollTo({top:0,behavior:'smooth'});
+});
 
 function payload(){
   const ids = Array.from(document.querySelectorAll('.mk-opp-cb:checked')).map(c=>c.value);

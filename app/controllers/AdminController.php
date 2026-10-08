@@ -1372,6 +1372,82 @@ class AdminController {
         return array_keys($out);
     }
 
+    /** Common misspellings of popular mailbox domains → the intended domain. */
+    private const MK_DOMAIN_TYPOS = [
+        'gmial.com' => 'gmail.com', 'gmai.com' => 'gmail.com', 'gmal.com' => 'gmail.com', 'gamil.com' => 'gmail.com',
+        'gnail.com' => 'gmail.com', 'gmail.co' => 'gmail.com', 'gmail.con' => 'gmail.com', 'gmail.cm' => 'gmail.com',
+        'gmaill.com' => 'gmail.com', 'gmail.om' => 'gmail.com', 'gmailcom' => 'gmail.com', 'gmail.comm' => 'gmail.com',
+        'yaho.com' => 'yahoo.com', 'yahooo.com' => 'yahoo.com', 'yahoo.co' => 'yahoo.com', 'yahoo.con' => 'yahoo.com', 'yhoo.com' => 'yahoo.com',
+        'hotmial.com' => 'hotmail.com', 'hotmai.com' => 'hotmail.com', 'hotmal.com' => 'hotmail.com', 'hotmail.co' => 'hotmail.com',
+        'hotmail.con' => 'hotmail.com', 'hotamil.com' => 'hotmail.com',
+        'outlok.com' => 'outlook.com', 'outloo.com' => 'outlook.com', 'outlook.co' => 'outlook.com', 'outlook.con' => 'outlook.com',
+        'iclod.com' => 'icloud.com', 'icloud.co' => 'icloud.com', 'icoud.com' => 'icloud.com', 'icloud.con' => 'icloud.com',
+        'aol.co' => 'aol.com', 'aol.con' => 'aol.com',
+    ];
+
+    /** Throwaway-inbox providers — addresses here never belong to a real long-term reader. */
+    private const MK_DISPOSABLE = [
+        'mailinator.com','guerrillamail.com','guerrillamail.net','10minutemail.com','tempmail.com','temp-mail.org',
+        'yopmail.com','trashmail.com','sharklasers.com','getnada.com','dispostable.com','maildrop.cc','throwawaymail.com',
+        'fakeinbox.com','mintemail.com','mohmal.com','emailondeck.com','tempail.com','burnermail.io','spamgourmet.com',
+    ];
+
+    /**
+     * Check every pasted address before sending: syntax, common domain typos,
+     * disposable inboxes, and whether the domain can receive mail at all (MX/A record).
+     * Returns per-address results so the admin can fix or drop the bad ones.
+     */
+    public static function marketingVerify(): void {
+        AuthMiddleware::admin();
+        AuthMiddleware::verifyCsrf();
+        $parts = preg_split('/[\s,;]+/', trim((string) input('recipients', ''))) ?: [];
+        $seen = [];
+        foreach ($parts as $p) { $p = strtolower(trim($p, " \t\n\r\0\x0B<>\"'")); if ($p !== '') $seen[$p] = true; }
+        $tokens = array_keys($seen);
+        if (empty($tokens))      json_response(['success' => false, 'error' => 'Paste some email addresses to check.']);
+        if (count($tokens) > 2000) json_response(['success' => false, 'error' => 'Please check at most 2,000 addresses at a time.']);
+
+        @set_time_limit(0);
+        $suppressed = array_flip(array_map('strtolower', array_column(DB::fetchAll("SELECT email FROM marketing_unsubscribes"), 'email')));
+        $disposable = array_flip(self::MK_DISPOSABLE);
+        $domainOk   = []; // per-domain DNS cache — each domain is looked up once
+
+        $results = [];
+        foreach ($tokens as $e) {
+            $r = ['email' => $e, 'status' => 'valid', 'reason' => '', 'suggestion' => null];
+            if (!filter_var($e, FILTER_VALIDATE_EMAIL)) {
+                $r['status'] = 'invalid'; $r['reason'] = 'Not a valid email format';
+                // Still offer a fix for things like "name@gmailcom"
+                if (str_contains($e, '@')) {
+                    $dom = substr(strrchr($e, '@'), 1);
+                    if (isset(self::MK_DOMAIN_TYPOS[$dom])) $r['suggestion'] = substr($e, 0, -strlen($dom)) . self::MK_DOMAIN_TYPOS[$dom];
+                }
+                $results[] = $r; continue;
+            }
+            $dom = substr(strrchr($e, '@'), 1);
+            if (isset(self::MK_DOMAIN_TYPOS[$dom])) {
+                $r['status'] = 'invalid'; $r['reason'] = 'Looks like a typo in the domain';
+                $r['suggestion'] = substr($e, 0, -strlen($dom)) . self::MK_DOMAIN_TYPOS[$dom];
+                $results[] = $r; continue;
+            }
+            if (!array_key_exists($dom, $domainOk)) {
+                $domainOk[$dom] = @checkdnsrr($dom . '.', 'MX') || @checkdnsrr($dom . '.', 'A');
+            }
+            if (!$domainOk[$dom]) {
+                $r['status'] = 'invalid'; $r['reason'] = 'Domain does not exist or cannot receive email';
+            } elseif (isset($disposable[$dom])) {
+                $r['status'] = 'risky'; $r['reason'] = 'Disposable / temporary inbox';
+            } elseif (isset($suppressed[$e])) {
+                $r['status'] = 'risky'; $r['reason'] = 'Unsubscribed — will be skipped';
+            }
+            $results[] = $r;
+        }
+
+        $counts = ['valid' => 0, 'risky' => 0, 'invalid' => 0];
+        foreach ($results as $r) $counts[$r['status']]++;
+        json_response(['success' => true, 'results' => $results, 'counts' => $counts]);
+    }
+
     /** Normalise featured_ids input (array or CSV) → clean list of ints, order preserved, de-duped. */
     private static function marketingIds(mixed $raw): array {
         if (is_array($raw)) $ids = $raw;
