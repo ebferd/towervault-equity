@@ -31,7 +31,11 @@ class Mailer {
     // ── Base send method ──────────────────────────────────────
     // $from (optional) overrides the sender: ['email'=>..., 'name'=>...].
     // Used by marketing so a campaign can appear from a chosen team member.
-    private static function send(string $toEmail, string $toName, string $subject, string $htmlBody, ?array $from = null): bool {
+    /** Error message from the most recent failed send (empty after a success). */
+    public static string $lastError = '';
+
+    private static function send(string $toEmail, string $toName, string $subject, string $htmlBody, ?array $from = null, array $headers = []): bool {
+        self::$lastError = '';
         // Guard: PHPMailer not installed (vendor/ missing on this host) — never fatal, just skip.
         if (!class_exists(PHPMailer::class)) {
             error_log("Mailer error [{$toEmail}]: PHPMailer library not found (composer dependencies missing).");
@@ -83,6 +87,7 @@ class Mailer {
             $mail->Subject = $subject;
             $mail->Body    = $htmlBody;
             $mail->AltBody = strip_tags(str_replace(['<br>','<br/>','</p>','</div>'], "\n", $htmlBody));
+            foreach ($headers as $hName => $hValue) $mail->addCustomHeader($hName, $hValue);
 
             $mail->send();
             return true;
@@ -91,6 +96,7 @@ class Mailer {
             // Catch everything — PHPMailer's own Exception, plus any Error (missing class,
             // type errors, etc.) so a broken mail config can NEVER take down the request.
             error_log("Mailer error [{$toEmail}]: " . $e->getMessage());
+            self::$lastError = $e->getMessage();
             return false;
         }
     }
@@ -1104,7 +1110,7 @@ HTML;
     }
 
     /** Public marketing site = the apex domain of the configured website (equity.foo.com -> foo.com). */
-    private static function marketingSiteUrl(): string {
+    public static function marketingSiteUrl(): string {
         $url    = platform_setting('platform_website', 'https://nexvest.com');
         $scheme = parse_url($url, PHP_URL_SCHEME) ?: 'https';
         $host   = parse_url($url, PHP_URL_HOST) ?: preg_replace('#^https?://#', '', rtrim($url, '/'));
@@ -1124,7 +1130,7 @@ HTML;
      * the dark fill but darkens the white text on it → invisible). A light card
      * with dark text inverts gracefully and stays readable in every client.
      */
-    private static function featuredCard(array $inv): string {
+    private static function featuredCard(array $inv, ?string $link = null): string {
         $appUrl = rtrim(platform_setting('platform_website', 'https://nexvest.com'), '/');
         $isRE   = ($inv['type'] ?? '') === 'real_estate';
         $navy   = '#1E3A5F';
@@ -1143,7 +1149,7 @@ HTML;
         // Marketing recipients aren't logged in — send them to the public
         // homepage where they can read about the company and register,
         // instead of the login-gated opportunity page.
-        $link   = self::marketingSiteUrl();
+        $link   = $link ?? self::marketingSiteUrl();
 
         // Optional property photo band on top (images are never recoloured by dark mode).
         $imgBand = '';
@@ -1315,6 +1321,9 @@ HTML;
      */
     public static function sendMarketing(string $email, string $subject, string $body, string $headline = '', array $invs = [], string $ctaLabel = '', string $trackToken = '', ?array $from = null): bool {
         $pUrl = rtrim(platform_setting('platform_website', 'https://nexvest.com'), '/');
+        // With a tracking token, buttons go through /e/click (records the click, then
+        // redirects to the public homepage). Test sends have no token → direct link.
+        $site = $trackToken !== '' ? $pUrl . '/e/click?t=' . $trackToken : self::marketingSiteUrl();
 
         $content = '';
         if (trim($headline) !== '') {
@@ -1326,12 +1335,11 @@ HTML;
         if ($invs) {
             $content .= "<div class='m-mut' style='font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#9CA3AF;margin:30px 0 4px'>"
                       . (count($invs) > 1 ? 'Featured opportunities' : 'Featured opportunity') . "</div>";
-            foreach ($invs as $inv) $content .= self::featuredCard($inv);
+            foreach ($invs as $inv) $content .= self::featuredCard($inv, $site);
         }
 
         // Link is always a path we already own — the admin never types a URL.
         $label = trim($ctaLabel) !== '' ? htmlspecialchars($ctaLabel) : 'Visit website';
-        $site  = self::marketingSiteUrl();
         $content .= "<table width='100%' cellpadding='0' cellspacing='0' style='margin:34px 0 6px'><tr><td align='center'>"
                   . "<a href='{$site}' class='m-btn2' style='display:inline-block;background:#1F3A5F;color:#ffffff;font-size:14.5px;font-weight:600;text-decoration:none;padding:14px 34px;border-radius:8px'>{$label} &rarr;</a>"
                   . "</td></tr></table>";
@@ -1343,6 +1351,13 @@ HTML;
         }
 
         $pre = trim($headline) !== '' ? $headline : mb_substr(trim($body), 0, 90);
-        return self::send($email, '', $subject, self::marketingWrap($content, $pre, self::unsubUrl($email)), $from);
+        // One-click unsubscribe (RFC 8058) — Gmail and Yahoo expect this on bulk mail.
+        // Mail apps show an "Unsubscribe" button that POSTs to the same URL.
+        $unsub   = self::unsubUrl($email);
+        $headers = [
+            'List-Unsubscribe'      => '<' . $unsub . '>',
+            'List-Unsubscribe-Post' => 'List-Unsubscribe=One-Click',
+        ];
+        return self::send($email, '', $subject, self::marketingWrap($content, $pre, $unsub), $from, $headers);
     }
 }

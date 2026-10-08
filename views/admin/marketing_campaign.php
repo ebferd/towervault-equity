@@ -3,6 +3,8 @@ $sent   = (int) $campaign['sent_count'];
 $opened = (int) $openedCount;
 $notOpened = max(0, count($recipients) - $opened);
 $rate   = $sent > 0 ? round($opened / $sent * 100) : 0;
+$clicked   = (int) ($clickedCount ?? 0);
+$clickRate = $sent > 0 ? round($clicked / $sent * 100) : 0;
 ?>
 <div class="page-head" style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap">
   <div>
@@ -20,11 +22,12 @@ $rate   = $sent > 0 ? round($opened / $sent * 100) : 0;
 
 <div id="mc-alert"></div>
 
-<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.25rem">
+<div class="mc-tiles">
   <?php foreach ([
       ['Recipients', (int)$campaign['recipient_count'], '#111827'],
       ['Sent',       $sent,   '#0f7a4a'],
       ['Opened',     $opened . ' (' . $rate . '%)', '#1E3A5F'],
+      ['Clicked',    $clicked . ' (' . $clickRate . '%)', '#1E3A5F'],
       ['Not opened', $notOpened, '#9CA3AF'],
     ] as [$lbl,$val,$col]): ?>
     <div class="section" style="padding:1.1rem 1.25rem;margin:0">
@@ -52,7 +55,7 @@ $rate   = $sent > 0 ? round($opened / $sent * 100) : 0;
     <?php else: ?>
     <table class="tbl" style="width:100%;border-collapse:collapse">
       <thead><tr>
-        <th style="text-align:left">Email</th><th>Status</th><th>Opens</th><th style="text-align:right">First opened</th>
+        <th style="text-align:left">Email</th><th>Status</th><th>Opens</th><th>Clicked</th><th style="text-align:right">First opened</th>
       </tr></thead>
       <tbody id="mc-rows">
         <?php foreach ($recipients as $r):
@@ -67,6 +70,7 @@ $rate   = $sent > 0 ? round($opened / $sent * 100) : 0;
               <?php endif; ?>
             </td>
             <td style="text-align:center;color:<?= $isOpen ? '#111827' : '#C4C9D4' ?>"><?= (int)$r['open_count'] ?></td>
+            <td style="text-align:center;color:<?= $r['clicked_at'] !== null ? '#1E3A5F' : '#C4C9D4' ?>;font-weight:<?= $r['clicked_at'] !== null ? 600 : 400 ?>"><?= $r['clicked_at'] !== null ? 'Yes' : 'No' ?></td>
             <td style="text-align:right;color:#9CA3AF;font-size:12.5px"><?= $isOpen ? date('M j, g:i A', strtotime($r['opened_at'])) : '—' ?></td>
           </tr>
         <?php endforeach; ?>
@@ -81,6 +85,8 @@ $rate   = $sent > 0 ? round($opened / $sent * 100) : 0;
   .tbl td{font-size:13px;color:#374151;padding:12px 16px;border-bottom:1px solid #F5F6F8}
   .tbl tbody tr:last-child td{border-bottom:none}
   .mc-actions{display:flex;gap:.6rem;flex-wrap:wrap}
+  .mc-tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:1rem;margin-bottom:1.25rem}
+  @media(max-width:900px){.mc-tiles{grid-template-columns:1fr 1fr}}
   .mc-actions .btn[disabled]{opacity:.5;cursor:not-allowed}
 </style>
 

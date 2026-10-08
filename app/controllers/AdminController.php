@@ -1408,7 +1408,8 @@ class AdminController {
         if (count($tokens) > 2000) json_response(['success' => false, 'error' => 'Please check at most 2,000 addresses at a time.']);
 
         @set_time_limit(0);
-        $suppressed = array_flip(array_map('strtolower', array_column(DB::fetchAll("SELECT email FROM marketing_unsubscribes"), 'email')));
+        $suppressed = [];
+        foreach (DB::fetchAll("SELECT email, reason FROM marketing_unsubscribes") as $s) $suppressed[strtolower($s['email'])] = $s['reason'];
         $disposable = array_flip(self::MK_DISPOSABLE);
         $domainOk   = []; // per-domain DNS cache — each domain is looked up once
 
@@ -1438,7 +1439,8 @@ class AdminController {
             } elseif (isset($disposable[$dom])) {
                 $r['status'] = 'risky'; $r['reason'] = 'Disposable / temporary inbox';
             } elseif (isset($suppressed[$e])) {
-                $r['status'] = 'risky'; $r['reason'] = 'Unsubscribed — will be skipped';
+                $r['status'] = 'risky';
+                $r['reason'] = $suppressed[$e] === 'bounced' ? 'Bounced before — will be skipped' : 'Unsubscribed — will be skipped';
             }
             $results[] = $r;
         }
@@ -1507,9 +1509,11 @@ class AdminController {
         AuthMiddleware::admin();
         $investments = DB::fetchAll("SELECT id, name, type, roi, status FROM investments ORDER BY is_featured DESC, id DESC");
         $recent      = DB::fetchAll(
-            "SELECT c.*, (SELECT COUNT(*) FROM marketing_recipients r WHERE r.campaign_id=c.id AND r.opened_at IS NOT NULL) AS opened_count
+            "SELECT c.*, (SELECT COUNT(*) FROM marketing_recipients r WHERE r.campaign_id=c.id AND r.opened_at IS NOT NULL) AS opened_count,
+                         (SELECT COUNT(*) FROM marketing_recipients r WHERE r.campaign_id=c.id AND r.clicked_at IS NOT NULL) AS clicked_count
              FROM marketing_campaigns c ORDER BY c.id DESC LIMIT 8"
         );
+        $frequencyDays = self::marketingFrequencyDays();
         $unsubCount  = (int) ((DB::fetch("SELECT COUNT(*) c FROM marketing_unsubscribes") ?? [])['c'] ?? 0);
         $adminEmail  = platform_setting('admin_notification_email', platform_setting('smtp_user', ''));
         $senders     = self::marketingSenders();
@@ -1548,7 +1552,7 @@ class AdminController {
             [$sql, $params] = self::emailListQuery($search, $filter);
             $listPrefill = array_column(DB::fetchAll("{$sql} ORDER BY email ASC", $params), 'email');
         }
-        view('admin.marketing', compact('investments','recent','unsubCount','adminEmail','senders','senderDomain','prefill','listPrefill'), 'admin');
+        view('admin.marketing', compact('investments','recent','unsubCount','adminEmail','senders','senderDomain','prefill','listPrefill','frequencyDays'), 'admin');
     }
 
     /**
@@ -1572,7 +1576,9 @@ class AdminController {
                        MAX(r.sent_at)                      AS last_sent,
                        SUM(r.opened_at IS NOT NULL)        AS opens,
                        MAX(r.last_opened_at)               AS last_opened,
-                       MAX(u.id IS NOT NULL)               AS unsubscribed
+                       SUM(r.clicked_at IS NOT NULL)       AS clicks,
+                       MAX(u.id IS NOT NULL)               AS unsubscribed,
+                       MAX(u.reason = 'bounced')           AS bounced
                   FROM marketing_recipients r
              LEFT JOIN marketing_unsubscribes u ON u.email = r.email
                 {$where}
@@ -1620,13 +1626,14 @@ class AdminController {
         header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename="email-list-' . date('Y-m-d') . '.csv"');
         $out = fopen('php://output', 'w');
-        fputcsv($out, ['Email', 'Status', 'Campaigns received', 'Opened', 'First emailed', 'Last emailed', 'Last opened']);
+        fputcsv($out, ['Email', 'Status', 'Campaigns received', 'Opened', 'Clicked', 'First emailed', 'Last emailed', 'Last opened']);
         foreach ($rows as $r) {
             fputcsv($out, [
                 $r['email'],
-                (int) $r['unsubscribed'] ? 'Unsubscribed' : 'Subscribed',
+                (int) $r['bounced'] ? 'Bounced' : ((int) $r['unsubscribed'] ? 'Unsubscribed' : 'Subscribed'),
                 (int) $r['campaigns'],
                 (int) $r['opens'] > 0 ? 'Yes' : 'No',
+                (int) $r['clicks'] > 0 ? 'Yes' : 'No',
                 $r['first_sent'], $r['last_sent'], $r['last_opened'] ?? '',
             ]);
         }
@@ -1677,15 +1684,18 @@ class AdminController {
         if (!$campaign) { http_response_code(404); view('errors.404', ['title' => 'Not found'], 'admin'); return; }
 
         $recipients = DB::fetchAll(
-            "SELECT email, sent_at, opened_at, last_opened_at, open_count
+            "SELECT email, sent_at, opened_at, last_opened_at, open_count, clicked_at, click_count
                FROM marketing_recipients WHERE campaign_id=?
               ORDER BY (opened_at IS NOT NULL) DESC, opened_at DESC, email ASC",
             [$id]
         );
-        $openedCount = 0;
-        foreach ($recipients as $r) if ($r['opened_at'] !== null) $openedCount++;
+        $openedCount = 0; $clickedCount = 0;
+        foreach ($recipients as $r) {
+            if ($r['opened_at']  !== null) $openedCount++;
+            if ($r['clicked_at'] !== null) $clickedCount++;
+        }
 
-        view('admin.marketing_campaign', compact('campaign','recipients','openedCount'), 'admin');
+        view('admin.marketing_campaign', compact('campaign','recipients','openedCount','clickedCount'), 'admin');
     }
 
     /** Send one preview copy to the admin's own address. */
@@ -1733,8 +1743,9 @@ class AdminController {
         if (!$r['success']) json_response($r);
 
         $msg = "Sent to {$r['sent']} recipient(s).";
-        if ($r['failed'])              $msg .= " {$r['failed']} failed.";
-        if ($r['skipped'])             $msg .= " {$r['skipped']} skipped (unsubscribed).";
+        if ($r['failed'])              $msg .= " {$r['failed']} failed" . ($r['bounced'] ? " ({$r['bounced']} address(es) rejected and blocked from future sends)" : '') . ".";
+        if ($r['skipped'])             $msg .= " {$r['skipped']} skipped (unsubscribed or bounced).";
+        if ($r['recent'])              $msg .= " {$r['recent']} skipped (emailed in the last " . self::marketingFrequencyDays() . " day(s)).";
         if (count($r['remaining']))    $msg .= " " . count($r['remaining']) . " loaded below for the next batch.";
         json_response(['success' => true, 'message' => $msg, 'sent' => $r['sent'], 'failed' => $r['failed'], 'skipped' => $r['skipped'], 'remaining' => $r['remaining']]);
     }
@@ -1745,11 +1756,23 @@ class AdminController {
      * The request is given unlimited time and keeps running even if the browser
      * disconnects, so a large send always has enough time to finish.
      */
-    private static function dispatchMarketing(string $subject, ?string $headline, string $body, array $featIds, array $invs, string $ctaLabel, ?array $from, array $emails, int $batch, int $adminId): array {
-        // Drop anyone on the suppression (unsubscribe) list.
+    private static function dispatchMarketing(string $subject, ?string $headline, string $body, array $featIds, array $invs, string $ctaLabel, ?array $from, array $emails, int $batch, int $adminId, bool $applyFrequency = true): array {
+        // Drop anyone on the suppression list (unsubscribed or bounced).
         $suppressed = array_flip(array_map('strtolower', array_column(DB::fetchAll("SELECT email FROM marketing_unsubscribes"), 'email')));
         $eligible = array_values(array_filter($emails, fn($e) => !isset($suppressed[$e])));
         $skipped  = count($emails) - count($eligible);
+
+        // Frequency limit: skip anyone emailed in the last N days (0 = off).
+        $recent = 0;
+        $days   = self::marketingFrequencyDays();
+        if ($applyFrequency && $days > 0 && $eligible) {
+            $recentSet = array_flip(array_map('strtolower', array_column(DB::fetchAll(
+                "SELECT DISTINCT email FROM marketing_recipients WHERE sent_at >= NOW() - INTERVAL ? DAY", [$days]
+            ), 'email')));
+            $before   = count($eligible);
+            $eligible = array_values(array_filter($eligible, fn($e) => !isset($recentSet[$e])));
+            $recent   = $before - count($eligible);
+        }
 
         // Batch throttle: send at most $batch this run, hand the rest back to the UI.
         $remaining = [];
@@ -1760,7 +1783,10 @@ class AdminController {
 
         $total = count($eligible);
         if ($total === 0) {
-            return ['success' => false, 'error' => 'No eligible recipients to send to (they may all be unsubscribed).'];
+            $why = $recent > 0
+                ? "Everyone on this list was emailed in the last {$days} day(s) or has unsubscribed. Change the frequency limit if you need to email them again sooner."
+                : 'No eligible recipients to send to (they may all be unsubscribed or bounced).';
+            return ['success' => false, 'error' => $why];
         }
 
         // Sending many messages over SMTP is slow — remove the time limit, keep
@@ -1776,17 +1802,51 @@ class AdminController {
             [$subject, $headline ?: null, $body, ($featIds ? implode(',', $featIds) : null), $ctaLabel ?: null, $total, $adminId]
         );
 
-        $sent = 0; $failed = 0;
+        $sent = 0; $failed = 0; $bounced = 0;
         foreach ($eligible as $i => $e) {
-            $token = bin2hex(random_bytes(16)); // unique per-recipient open-tracking token
+            $token = bin2hex(random_bytes(16)); // unique per-recipient open/click-tracking token
             DB::query("INSERT INTO marketing_recipients (campaign_id, email, token) VALUES (?,?,?)", [$campaignId, $e, $token]);
-            if (Mailer::sendMarketing($e, $subject, $body, $headline ?? '', $invs, $ctaLabel, $token, $from)) $sent++; else $failed++;
+            if (Mailer::sendMarketing($e, $subject, $body, $headline ?? '', $invs, $ctaLabel, $token, $from)) {
+                $sent++;
+            } else {
+                $failed++;
+                // The mail server rejected this address outright (no such mailbox, etc.):
+                // add it to the suppression list so it is never emailed again.
+                if (self::isRecipientRejection(Mailer::$lastError)) {
+                    DB::query("INSERT IGNORE INTO marketing_unsubscribes (email, reason, detail) VALUES (?, 'bounced', ?)",
+                              [$e, mb_substr(Mailer::$lastError, 0, 255)]);
+                    $bounced++;
+                }
+            }
             if ($i < $total - 1) usleep(400000); // ~0.4s between sends
         }
         DB::execute("UPDATE marketing_campaigns SET sent_count=?, failed_count=? WHERE id=?", [$sent, $failed, $campaignId]);
-        audit_log($adminId, 'marketing_sent', "Marketing campaign '{$subject}' sent to {$sent} recipient(s)" . ($skipped ? ", {$skipped} suppressed" : '') . (count($remaining) ? ', ' . count($remaining) . ' held for next batch' : ''), 'medium', 'platform', null, 'Marketing');
+        audit_log($adminId, 'marketing_sent', "Marketing campaign '{$subject}' sent to {$sent} recipient(s)" . ($skipped ? ", {$skipped} suppressed" : '') . ($recent ? ", {$recent} emailed recently" : '') . (count($remaining) ? ', ' . count($remaining) . ' held for next batch' : ''), 'medium', 'platform', null, 'Marketing');
 
-        return ['success' => true, 'sent' => $sent, 'failed' => $failed, 'skipped' => $skipped, 'remaining' => array_values($remaining), 'campaign_id' => $campaignId];
+        return ['success' => true, 'sent' => $sent, 'failed' => $failed, 'bounced' => $bounced, 'skipped' => $skipped, 'recent' => $recent, 'remaining' => array_values($remaining), 'campaign_id' => $campaignId];
+    }
+
+    /** True when an SMTP error means the recipient address itself was refused (a hard bounce). */
+    private static function isRecipientRejection(string $error): bool {
+        if ($error === '') return false;
+        // Connection / login problems are ours, not the recipient's — never treat those as bounces.
+        if (preg_match('/could not connect|connect\(\) failed|could not authenticate|authentication|timed out|connection refused|not configured|library not found/i', $error)) return false;
+        return (bool) preg_match('/recipients? failed|5\.1\.[0-9]|user unknown|no such user|mailbox (unavailable|not found|does not exist)|address rejected|invalid recipient|recipient.*(rejected|not found)/i', $error);
+    }
+
+    private static function marketingFrequencyDays(): int {
+        return max(0, (int) platform_setting('marketing_frequency_days', '0'));
+    }
+
+    /** Save the frequency limit (days). */
+    public static function marketingSettings(): void {
+        AuthMiddleware::admin();
+        AuthMiddleware::verifyCsrf();
+        $days = max(0, min(90, (int) input('frequency_days', 0)));
+        set_platform_setting('marketing_frequency_days', (string) $days, 'email');
+        json_response(['success' => true, 'message' => $days > 0
+            ? "Saved. People emailed in the last {$days} day(s) will be skipped."
+            : 'Saved. Frequency limit is off.']);
     }
 
     /** One-click resend of a past campaign to the recipients who never opened it. */
@@ -1812,13 +1872,14 @@ class AdminController {
 
         $r = self::dispatchMarketing(
             (string) $campaign['subject'], $campaign['headline'] ?? '', (string) $campaign['body'],
-            $featIds, $invs, (string) ($campaign['cta_label'] ?? ''), $from, $nonOpeners, $batch, $adminId
+            $featIds, $invs, (string) ($campaign['cta_label'] ?? ''), $from, $nonOpeners, $batch, $adminId,
+            false // a resend to non-openers is deliberate — don't apply the frequency limit
         );
         if (!$r['success']) json_response($r);
 
         $msg = "Resent to {$r['sent']} of " . count($nonOpeners) . " non-opener(s).";
-        if ($r['failed'])           $msg .= " {$r['failed']} failed.";
-        if ($r['skipped'])          $msg .= " {$r['skipped']} skipped (unsubscribed).";
+        if ($r['failed'])           $msg .= " {$r['failed']} failed" . ($r['bounced'] ? " ({$r['bounced']} blocked as bounced)" : '') . ".";
+        if ($r['skipped'])          $msg .= " {$r['skipped']} skipped (unsubscribed or bounced).";
         if (count($r['remaining'])) $msg .= " " . count($r['remaining']) . " left for the next batch.";
         json_response(['success' => true, 'message' => $msg, 'sent' => $r['sent'], 'failed' => $r['failed'], 'remaining' => $r['remaining']]);
     }

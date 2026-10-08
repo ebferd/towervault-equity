@@ -165,7 +165,18 @@
         <button type="button" class="btn btn-primary btn-lg" id="mk-send-btn" style="width:100%;justify-content:center"><?= svgIcon('send',14,'#fff') ?>Send campaign</button>
         <p class="fl-opt" style="margin-top:.6rem;text-align:center">Each recipient gets a separate email — no one sees anyone else's address. Always send a test to yourself first.</p>
 
-        <div class="mk-stat"><span>On the suppression list</span><b><?= (int)$unsubCount ?> unsubscribed</b></div>
+        <div class="mk-stat"><span>On the suppression list</span><b><?= (int)$unsubCount ?> unsubscribed / bounced</b></div>
+
+        <div class="fg" style="margin-top:1rem">
+          <label class="fl">Frequency limit</label>
+          <div style="display:flex;gap:.5rem;align-items:center">
+            <span style="font-size:12.5px;color:#6B7280;white-space:nowrap">Skip anyone emailed in the last</span>
+            <input class="fi" id="mk-freq" type="number" min="0" max="90" step="1" value="<?= (int)$frequencyDays ?>" style="width:70px"/>
+            <span style="font-size:12.5px;color:#6B7280">day(s)</span>
+            <button type="button" class="btn btn-ghost" id="mk-freq-save" style="margin-left:auto">Save</button>
+          </div>
+          <p class="fl-opt" style="margin-top:.4rem">Stops the same person getting several emails in a row. 0 turns it off. Resending to non-openers ignores this.</p>
+        </div>
       </div>
     </div>
   </div>
@@ -177,18 +188,20 @@
   <div class="section-body" style="padding:0">
     <table class="tbl" style="width:100%;border-collapse:collapse">
       <thead><tr>
-        <th style="text-align:left">Subject</th><th>Recipients</th><th>Sent</th><th>Opened</th><th>Failed</th><th style="text-align:right">Date</th>
+        <th style="text-align:left">Subject</th><th>Recipients</th><th>Sent</th><th>Opened</th><th>Clicked</th><th>Failed</th><th style="text-align:right">Date</th>
       </tr></thead>
       <tbody>
         <?php foreach ($recent as $c):
           $sent = (int)$c['sent_count']; $opened = (int)($c['opened_count'] ?? 0);
           $rate = $sent > 0 ? round($opened / $sent * 100) : 0;
+          $clicked = (int)($c['clicked_count'] ?? 0);
         ?>
           <tr>
             <td style="text-align:left"><a href="/admin/marketing/campaign/<?= (int)$c['id'] ?>" style="color:#1E3A5F;font-weight:600;text-decoration:none"><?= htmlspecialchars($c['subject']) ?></a></td>
             <td style="text-align:center"><?= (int)$c['recipient_count'] ?></td>
             <td style="text-align:center;color:#0f7a4a;font-weight:600"><?= $sent ?></td>
             <td style="text-align:center;font-weight:600;color:<?= $opened ? '#1E3A5F' : '#9CA3AF' ?>"><?= $opened ?><?= $sent ? ' <span style="font-weight:400;color:#9CA3AF">('.$rate.'%)</span>' : '' ?></td>
+            <td style="text-align:center;font-weight:600;color:<?= $clicked ? '#1E3A5F' : '#9CA3AF' ?>"><?= $clicked ?></td>
             <td style="text-align:center;color:<?= (int)$c['failed_count'] ? '#C0392B' : '#9CA3AF' ?>"><?= (int)$c['failed_count'] ?></td>
             <td style="text-align:right;color:#9CA3AF"><?= date('M j, Y g:i A', strtotime($c['created_at'])) ?></td>
           </tr>
@@ -308,6 +321,17 @@ function payload(){
     sender_email: $('mk-sender').value,
   };
 }
+
+// ── Frequency limit ───────────────────────────────────────────
+$('mk-freq-save').addEventListener('click', async function(){
+  setLoading(this, true, 'Saving…');
+  const data = await post('/admin/marketing/settings', { frequency_days: parseInt($('mk-freq').value, 10) || 0 });
+  setLoading(this, false);
+  $('mk-alert').innerHTML = data.success
+    ? '<div class="alert alert-ok">' + data.message + '</div>'
+    : '<div class="alert alert-err">' + (data.error || 'Could not save.') + '</div>';
+  window.scrollTo({top:0,behavior:'smooth'});
+});
 
 // ── Sender management ─────────────────────────────────────────
 $('mk-add-sender').addEventListener('click', async function(){

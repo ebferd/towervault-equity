@@ -91,7 +91,9 @@ Router::get('/api/opportunities',        [InvestorController::class, 'apiOpportu
 Router::get('/api/news',                 [InvestorController::class, 'apiNews']);
 Router::get('/investor/fund-protection', [InvestorController::class, 'fundProtection']);
 Router::get('/unsubscribe',              [InvestorController::class, 'unsubscribe']);
+Router::post('/unsubscribe',             [InvestorController::class, 'unsubscribe']);
 Router::get('/e/open',                   [InvestorController::class, 'emailOpen']);
+Router::get('/e/click',                  [InvestorController::class, 'emailClick']);
 Router::get('/manifest.webmanifest',     [InvestorController::class, 'manifest']);
 Router::get('/sw.js',                    [InvestorController::class, 'serviceWorker']);
 
@@ -192,6 +194,7 @@ Router::post('/admin/marketing/test',    [AdminController::class, 'marketingTest
 Router::post('/admin/marketing/send',    [AdminController::class, 'marketingSend']);
 Router::post('/admin/marketing/resend',  [AdminController::class, 'marketingResend']);
 Router::post('/admin/marketing/verify',  [AdminController::class, 'marketingVerify']);
+Router::post('/admin/marketing/settings', [AdminController::class, 'marketingSettings']);
 Router::post('/admin/marketing/senders/add',    [AdminController::class, 'addMarketingSender']);
 Router::post('/admin/marketing/senders/delete', [AdminController::class, 'deleteMarketingSender']);
 Router::post('/admin/settings/test-smtp',[AdminController::class, 'testSmtp']);

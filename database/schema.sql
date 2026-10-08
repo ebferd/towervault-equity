@@ -766,6 +766,8 @@ CREATE TABLE IF NOT EXISTS `marketing_campaigns` (
 CREATE TABLE IF NOT EXISTS `marketing_unsubscribes` (
   `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `email`       VARCHAR(255) NOT NULL,
+  `reason`      ENUM('unsubscribed','bounced') NOT NULL DEFAULT 'unsubscribed',
+  `detail`      VARCHAR(255) DEFAULT NULL,
   `created_at`  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uniq_mu_email` (`email`)
@@ -781,11 +783,17 @@ CREATE TABLE IF NOT EXISTS `marketing_recipients` (
   `opened_at`      DATETIME     DEFAULT NULL,
   `last_opened_at` DATETIME     DEFAULT NULL,
   `open_count`     INT UNSIGNED NOT NULL DEFAULT 0,
+  `clicked_at`     DATETIME     DEFAULT NULL,
+  `click_count`    INT UNSIGNED NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uniq_mr_token` (`token`),
   KEY `idx_mr_campaign` (`campaign_id`),
-  KEY `idx_mr_opened` (`opened_at`)
+  KEY `idx_mr_opened` (`opened_at`),
+  KEY `idx_mr_email_sent` (`email`, `sent_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ── Market news (migration_v18) ──────────────────────────────
+CREATE TABLE IF NOT EXISTS `news_posts` (
   `id`           INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `title`        VARCHAR(400)  NOT NULL,
   `summary`      TEXT          DEFAULT NULL,
@@ -810,3 +818,6 @@ INSERT INTO `platform_settings` (`setting_key`,`setting_value`,`setting_group`) 
  ('news_rss_url','https://www.realtor.com/news/feed/
 https://www.theguardian.com/money/property/rss
 https://rss.nytimes.com/services/xml/rss/nyt/RealEstate.xml','general'),
+ ('news_enabled','1','general'),
+ ('marketing_frequency_days','3','email')
+ON DUPLICATE KEY UPDATE `setting_value`=`setting_value`;

@@ -1408,6 +1408,18 @@ class InvestorController {
 
         if ($valid) {
             DB::query("INSERT IGNORE INTO marketing_unsubscribes (email) VALUES (?)", [$email]);
+        }
+
+        // One-click unsubscribe (List-Unsubscribe-Post): the mail app POSTs here in the
+        // background — no page to show, just confirm with a 200 (or 400 if the link is bad).
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            http_response_code($valid ? 200 : 400);
+            header('Content-Type: text/plain');
+            echo $valid ? 'Unsubscribed' : 'Invalid unsubscribe link';
+            exit;
+        }
+
+        if ($valid) {
             $heading = 'You have been unsubscribed';
             $content = '<p>' . htmlspecialchars($email) . ' has been removed from our marketing list. '
                      . 'You will no longer receive promotional emails from ' . htmlspecialchars($name) . '.</p>'
@@ -1442,6 +1454,29 @@ class InvestorController {
         header('Pragma: no-cache');
         header('Content-Length: 43');
         echo base64_decode('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
+        exit;
+    }
+
+    // ── Marketing click-tracking (public, no auth) ─────────────
+    // Records the click, then always redirects to our own public homepage —
+    // never to a URL taken from the request, so this can't be used as an open redirect.
+    public static function emailClick(): void {
+        $token = (string) ($_GET['t'] ?? '');
+        if (preg_match('/^[0-9a-f]{32}$/', $token)) {
+            try {
+                // A click also proves the email was opened (images may have been blocked).
+                DB::execute(
+                    "UPDATE marketing_recipients
+                        SET click_count = click_count + 1,
+                            clicked_at  = COALESCE(clicked_at, NOW()),
+                            opened_at   = COALESCE(opened_at, NOW()),
+                            last_opened_at = COALESCE(last_opened_at, NOW())
+                      WHERE token = ?",
+                    [$token]
+                );
+            } catch (\Throwable $e) { /* never let tracking block the visitor */ }
+        }
+        header('Location: ' . Mailer::marketingSiteUrl(), true, 302);
         exit;
     }
 
