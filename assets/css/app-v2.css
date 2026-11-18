@@ -509,3 +509,19 @@ textarea.fi{height:auto;padding:12px 14px;resize:vertical;min-height:90px}
 .nw-expire svg{width:12px;height:12px}
 .nw-empty{text-align:center;padding:48px 20px;color:var(--mist-400,#8B988F);font-size:14px}
 .nw-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+
+/* ── Investment card tag ── */
+.inv-tag{display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:top;font-size:10.5px;font-weight:700;letter-spacing:.03em;line-height:1;padding:5px 10px;border-radius:99px;border:1px solid transparent;white-space:nowrap}
+.inv-tag-blue{color:#1D4ED8;background:#EFF6FF;border-color:#BFDBFE}
+.inv-tag-green{color:#0F7A4A;background:#ECFDF3;border-color:#BBF0D3}
+.inv-tag-amber{color:#B45309;background:#FFFBEB;border-color:#FDE68A}
+.inv-tag-red{color:#B42318;background:#FEF3F2;border-color:#FECDCA}
+.inv-tag-purple{color:#6D28D9;background:#F5F3FF;border-color:#DDD6FE}
+.inv-tag-slate{color:#475467;background:#F2F4F7;border-color:#D0D5DD}
+.inv-tag-row{margin-bottom:9px}
+.tag-swatches{display:flex;flex-wrap:wrap;gap:.5rem}
+.tag-sw{cursor:pointer;display:inline-flex}
+.tag-sw input{position:absolute;opacity:0;pointer-events:none}
+.tag-sw .inv-tag{opacity:.55;transition:opacity .15s,box-shadow .15s}
+.tag-sw:hover .inv-tag{opacity:.85}
+.tag-sw input:checked + .inv-tag{opacity:1;box-shadow:0 0 0 2px #fff,0 0 0 4px currentColor}

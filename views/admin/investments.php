@@ -12,10 +12,10 @@
         $pct = $inv['funding_target'] > 0 ? min(100, round(($inv['funding_raised']/$inv['funding_target'])*100)) : null;
       ?>
         <tr>
-          <td style="font-weight:500;max-width:180px"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><?= htmlspecialchars($inv['name']) ?></div></td>
+          <td style="font-weight:500;max-width:180px"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><?= htmlspecialchars($inv['name']) ?></div><?php if (!empty($inv['tag'])): ?><span class="inv-tag inv-tag-<?= htmlspecialchars($inv['tag_color'] ?? 'blue') ?>" style="margin-top:4px;display:block;width:fit-content;max-width:170px;overflow:hidden;text-overflow:ellipsis" title="<?= htmlspecialchars($inv['tag']) ?>"><?= htmlspecialchars($inv['tag']) ?></span><?php endif; ?></td>
           <td><span class="badge badge-<?= $inv['type']==='real_estate'?'re':'if' ?>"><?= $inv['type']==='real_estate'?'Real Estate':'Index Fund' ?></span></td>
           <td style="color:var(--green);font-weight:700"><?= $inv['roi'] ?>%</td>
-          <td style="color:var(--text2)"><?= $inv['duration_value'].' '.ucfirst($inv['duration_unit']).'s' ?></td>
+          <td style="color:var(--text2)"><?= $inv['duration_value'].' '.ucfirst($inv['duration_unit']) ?></td>
           <td style="min-width:120px">
             <?php if ($pct !== null): ?><div style="font-size:11px;color:var(--text3);margin-bottom:3px"><?= $pct ?>%</div><div style="height:4px;background:var(--surface3);border-radius:3px;overflow:hidden"><div style="height:100%;background:<?= $pct>=100?'var(--green)':'var(--accent)' ?>;width:<?= $pct ?>%;border-radius:3px"></div></div><?php else: ?><span style="font-size:11.5px;color:var(--text3)"><?= fmt_currency((float)$inv['funding_raised']) ?></span><?php endif; ?>
           </td>

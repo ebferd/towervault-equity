@@ -92,6 +92,36 @@ $type  = $inv['type'] ?? 'real_estate';
           <?php endforeach; ?>
         </div>
       </div>
+
+      <!-- CARD TAG -->
+      <?php
+        $tagVal   = (string) ($inv['tag'] ?? '');
+        $tagColor = (string) ($inv['tag_color'] ?? 'blue');
+        $tagColors = ['blue' => 'Blue', 'green' => 'Green', 'amber' => 'Amber', 'red' => 'Red', 'purple' => 'Purple', 'slate' => 'Grey'];
+      ?>
+      <div class="section" style="margin-top:1.25rem">
+        <div class="section-head"><span class="section-title">Card Tag</span><span class="section-meta">Optional label on the investor-side card</span></div>
+        <div class="section-body">
+          <div class="fg">
+            <label class="fl">Tag text <span class="fl-opt">(max 30 characters — leave blank for no tag)</span></label>
+            <input class="fi" id="tag-text" name="tag" maxlength="30" value="<?= htmlspecialchars($tagVal) ?>" placeholder="e.g. New, Limited slots, Closing soon"/>
+          </div>
+          <div class="fg" style="margin-bottom:.75rem">
+            <label class="fl">Colour</label>
+            <div class="tag-swatches">
+              <?php foreach ($tagColors as $k => $label): ?>
+                <label class="tag-sw" title="<?= $label ?>">
+                  <input type="radio" name="tag_color" value="<?= $k ?>" <?= $tagColor === $k ? 'checked' : '' ?>/>
+                  <span class="inv-tag inv-tag-<?= $k ?>"><?= $label ?></span>
+                </label>
+              <?php endforeach; ?>
+            </div>
+          </div>
+          <div class="fl-opt" style="margin-bottom:.35rem">Preview</div>
+          <span id="tag-preview" class="inv-tag inv-tag-<?= htmlspecialchars($tagColor) ?>" style="<?= $tagVal === '' ? 'display:none' : '' ?>"><?= htmlspecialchars($tagVal) ?></span>
+          <span id="tag-preview-empty" class="fl-opt" style="<?= $tagVal === '' ? '' : 'display:none' ?>">No tag will be shown.</span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -176,6 +206,22 @@ $type  = $inv['type'] ?? 'real_estate';
 </form>
 
 <script>
+// Live preview of the card tag
+(function () {
+  const text = document.getElementById('tag-text'), chip = document.getElementById('tag-preview'), empty = document.getElementById('tag-preview-empty');
+  if (!text || !chip) return;
+  function refresh() {
+    const color = (document.querySelector('input[name="tag_color"]:checked') || {}).value || 'blue';
+    const v = text.value.trim();
+    chip.className = 'inv-tag inv-tag-' + color;
+    chip.textContent = v;
+    chip.style.display = v ? '' : 'none';
+    empty.style.display = v ? 'none' : '';
+  }
+  text.addEventListener('input', refresh);
+  document.querySelectorAll('input[name="tag_color"]').forEach(r => r.addEventListener('change', refresh));
+})();
+
 function toggleType() {
   const type = document.getElementById('inv-type').value;
   document.getElementById('re-fields').style.display = type === 'real_estate' ? '' : 'none';

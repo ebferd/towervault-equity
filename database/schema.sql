@@ -271,6 +271,8 @@ CREATE TABLE `investments` (
   `is_featured`      TINYINT(1)      NOT NULL DEFAULT 0,
   `is_verified`      TINYINT(1)      NOT NULL DEFAULT 0,
   `notify_on_launch` TINYINT(1)      NOT NULL DEFAULT 0,
+  `tag`              VARCHAR(30)     DEFAULT NULL,
+  `tag_color`        ENUM('blue','green','amber','red','purple','slate') NOT NULL DEFAULT 'blue',
   `investor_count`   INT UNSIGNED    NOT NULL DEFAULT 0,
   `image`            VARCHAR(255)    DEFAULT NULL,
   `created_by`       INT UNSIGNED    DEFAULT NULL,

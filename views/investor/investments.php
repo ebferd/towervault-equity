@@ -54,6 +54,9 @@
           </div>
         </div>
         <div class="inv-body">
+          <?php if (!empty($inv['tag'])): ?>
+            <div class="inv-tag-row"><span class="inv-tag inv-tag-<?= htmlspecialchars($inv['tag_color'] ?? 'blue') ?>"><?= htmlspecialchars($inv['tag']) ?></span></div>
+          <?php endif; ?>
           <div class="inv-name"><?= htmlspecialchars($inv['name']) ?></div>
           <?php if ($locTxt): ?>
             <div class="inv-loc">

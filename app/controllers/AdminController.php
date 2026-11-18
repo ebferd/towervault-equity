@@ -645,8 +645,8 @@ class AdminController {
                   payout_frequency, min_investment, max_investment, funding_target, funding_raised, property_type, street_address, city, state_region,
                   country, postcode, maps_link, property_size, total_units, occupancy_rate, year_built, completion_date,
                   ticker, fund_category, risk_level, management_fee, benchmark, fund_start_date, fund_end_date,
-                  is_featured, is_verified, notify_on_launch, created_by)
-                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                  is_featured, is_verified, notify_on_launch, tag, tag_color, created_by)
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 [
                     $data['name'], $slug, $data['type'], $data['status'], $data['short_desc'], $data['description'],
                     $data['roi'], $data['duration_value'], $data['duration_unit'], $data['payout_frequency'],
@@ -656,6 +656,7 @@ class AdminController {
                     $data['year_built'], $data['completion_date'], $data['ticker'], $data['fund_category'],
                     $data['risk_level'], $data['management_fee'], $data['benchmark'], $data['fund_start_date'],
                     $data['fund_end_date'], $data['is_featured'], $data['is_verified'], $data['notify_on_launch'],
+                    $data['tag'], $data['tag_color'],
                     $adminId,
                 ]
             );
@@ -723,7 +724,7 @@ class AdminController {
               payout_frequency=?,min_investment=?,max_investment=?,funding_target=?,funding_raised=?,property_type=?,street_address=?,city=?,
               state_region=?,country=?,postcode=?,maps_link=?,property_size=?,total_units=?,occupancy_rate=?,year_built=?,
               completion_date=?,ticker=?,fund_category=?,risk_level=?,management_fee=?,benchmark=?,fund_start_date=?,
-              fund_end_date=?,is_featured=?,is_verified=?,notify_on_launch=?,updated_at=NOW() WHERE id=?",
+              fund_end_date=?,is_featured=?,is_verified=?,notify_on_launch=?,tag=?,tag_color=?,updated_at=NOW() WHERE id=?",
             [...array_values($data), $id]
         );
 
@@ -2103,6 +2104,11 @@ class AdminController {
         $type = sanitize($_POST['type'] ?? 'real_estate');
         $type = in_array($type, ['real_estate','index_fund'], true) ? $type : 'real_estate';
 
+        // Optional label shown on the investor-side card (e.g. "Limited slots", "New", "Closing soon").
+        $tag      = mb_substr(preg_replace('/\s+/', ' ', sanitize($_POST['tag'] ?? '')), 0, 30) ?: null;
+        $tagColor = (string) ($_POST['tag_color'] ?? 'blue');
+        $tagColor = in_array($tagColor, ['blue','green','amber','red','purple','slate'], true) ? $tagColor : 'blue';
+
         return [
             'name'             => sanitize($_POST['name'] ?? ''),
             'type'             => $type,
@@ -2139,6 +2145,8 @@ class AdminController {
             'is_featured'      => $bool('is_featured'),
             'is_verified'      => $bool('is_verified'),
             'notify_on_launch' => $bool('notify_on_launch'),
+            'tag'              => $tag,
+            'tag_color'        => $tagColor,
         ];
     }
 
